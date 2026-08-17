@@ -128,3 +128,5 @@
 - [x] Add an explicit, user-triggered one-page role-based resume option for No JD applications that uses the role title to prioritize, reorder, and carefully rephrase only supported master-profile facts; label it accurately as role-based rather than JD-tailored.
 - [x] Add regression coverage and visual validation for the No JD role-based resume option, its approval gate, and its no-fabrication boundary.
 - [x] Add focused server coverage that a No JD role-based resume still needs a generated reviewable draft before it can be approved for export.
+- [x] Compare Google-account allowlist authentication with a passkey-only WebAuthn gate for a portable private deployment, including device-loss recovery.
+- [x] Define a portable hosting, database, storage, and Gmail OAuth draft-attachment migration plan that does not depend on Manus-specific services.
