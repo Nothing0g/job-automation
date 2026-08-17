@@ -148,3 +148,6 @@
 - [x] Remove the portable deployment's required R2 configuration and prevent platform-storage fallback when portable mode is active without a configured external object store.
 - [x] Supersede the previously planned live S3/R2 round-trip check for the selected no-R2 deployment path; retain only TiDB, Google sign-in, Gmail OAuth, and draft-attachment live checks.
 - [x] Synchronize the validated no-R2 and TiDB migration-preparation changes to the private GitHub repository before Vercel project creation.
+- [ ] Select a user-approved portable AI approach before enabling hosted resume tailoring and personalized email generation outside the managed environment.
+- [ ] Make raw resume-file upload and download behavior explicit for no-R2 portable mode so those controls cannot fail after deployment.
+- [ ] Integrate a user-owned server-side Gemini API provider for strictly grounded resume tailoring and personalized email drafting in portable mode.
