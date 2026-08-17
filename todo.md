@@ -120,3 +120,7 @@
 - [ ] Add automated and manual validation for the preserved backup, authorized Gmail workflow, and in-app job listing view.
 - [x] Verify the authorized Gmail integration supports saving a draft with attachments; additional inbox and label capabilities remain unused.
 - [ ] Document and implement an application-level restriction so the job workflow can only prepare a manual-send draft with an approved resume attachment.
+- [x] Restore Job Discovery to a redirect-first experience with role, location, and available freshness filters embedded in provider search URLs.
+- [x] Research and add high-quality specialist job sources, including Wellfound and YC’s Work at a Startup, alongside the established job boards.
+- [ ] Verify the Brivo Gmail draft uses a stored recipient and contains the approved resume as a real attachment rather than relying on a compose URL.
+- [ ] Defer the Gmail attachment-draft action until the user selects an application with a verified recipient email; do not create or send a Brivo draft without that address.
