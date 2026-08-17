@@ -3,7 +3,7 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { applicationStatuses, jobContextModes } from "../drizzle/schema";
 import * as db from "./db";
-import { buildEmailMessages, buildLimitedContextEmailMessages, buildResumeMessages, buildResumeShorteningMessages } from "./lib/aiPrompts";
+import { buildEmailMessages, buildLimitedContextEmailMessages, buildResumeMessages, buildResumeShorteningMessages, buildRoleBasedResumeMessages } from "./lib/aiPrompts";
 import { fetchPublicJobPosting } from "./lib/jobPosting";
 import { parseFollowUpDate } from "./lib/jobTracker";
 import { appendEmailSignature } from "./lib/emailSignature";
@@ -74,7 +74,8 @@ async function preferredModel() {
 }
 
 async function generateOnePageResume(model: string | undefined, profile: { resumeText: string | null; personalBio: string | null; resumeFileUrl?: string }, job: { company: string; role: string; jobDescription: string; contextMode: "full" | "limited" }) {
-  let draft = contentFrom(await invokeLLM({ model, messages: buildResumeMessages(profile, job), maxTokens: 2600 }));
+  const resumeMessages = job.contextMode === "limited" ? buildRoleBasedResumeMessages(profile, job) : buildResumeMessages(profile, job);
+  let draft = contentFrom(await invokeLLM({ model, messages: resumeMessages, maxTokens: 2600 }));
   for (let attempt = 0; attempt < 2 && !resumeFitsOnePage(draft); attempt += 1) {
     draft = contentFrom(await invokeLLM({ model, messages: buildResumeShorteningMessages(profile, job, draft), maxTokens: 1800 }));
   }
@@ -205,8 +206,15 @@ export const appRouter = router({
         const profileContext = { resumeText: profile.resumeText, personalBio: profile.personalBio, resumeFileUrl };
         const model = await preferredModel();
         if (job.contextMode === "limited") {
-          const emailResult = await invokeLLM({ model, messages: buildLimitedContextEmailMessages(profileContext, job), maxTokens: 1400 });
-          return db.updateJobForUser(user.id, job.id, { emailDraft: appendEmailSignature(cleanEmailDraft(contentFrom(emailResult)), profile.emailSignature) });
+          const [roleBasedResume, emailResult] = await Promise.all([
+            generateOnePageResume(model, profileContext, job),
+            invokeLLM({ model, messages: buildLimitedContextEmailMessages(profileContext, job), maxTokens: 1400 }),
+          ]);
+          return db.updateJobForUser(user.id, job.id, {
+            tailoredResume: roleBasedResume,
+            tailoredResumeApprovedAt: null,
+            emailDraft: appendEmailSignature(cleanEmailDraft(contentFrom(emailResult)), profile.emailSignature),
+          });
         }
         const [tailoredResume, emailResult] = await Promise.all([
           generateOnePageResume(model, profileContext, job),

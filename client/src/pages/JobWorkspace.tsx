@@ -150,7 +150,7 @@ function ExportActions({
   );
 }
 
-function ResumePreview({ content, contactLinks }: { content: string; contactLinks?: ContactLinks }) {
+function ResumePreview({ content, contactLinks, emptyMessage = "Generate a resume to review it here before any export is enabled." }: { content: string; contactLinks?: ContactLinks; emptyMessage?: string }) {
   const { data: previewProfile } = trpc.profile.get.useQuery();
   const { name, links, body } = resumeHeader(content, contactLinks ?? previewProfile?.contactLinks);
 
@@ -185,7 +185,7 @@ function ResumePreview({ content, contactLinks }: { content: string; contactLink
           })}
         </>
       ) : (
-        <p className="font-sans text-sm text-muted-foreground">Generate a tailored resume to review it here before any export is enabled.</p>
+        <p className="font-sans text-sm text-muted-foreground">{emptyMessage}</p>
       )}
     </article>
   );
@@ -252,7 +252,7 @@ export default function JobWorkspace() {
         setForm(current => ({ ...current, tailoredResume: data.tailoredResume ?? "", emailDraft: cleanEmailDraftForDisplay(data.emailDraft ?? "") }));
         setResumeApprovedAt(data.tailoredResumeApprovedAt ?? null);
       }
-      toast.success(form.contextMode === "limited" ? "Factual outreach email ready. Your master resume was left unchanged." : "A one-page resume draft is ready to preview and approve.");
+      toast.success(form.contextMode === "limited" ? "A one-page role-based resume and factual outreach email are ready to review." : "A one-page resume draft is ready to preview and approve.");
       void utils.jobs.list.invalidate();
       void utils.jobs.get.invalidate({ id: jobId });
     },
@@ -310,7 +310,7 @@ export default function JobWorkspace() {
         </Button>
         <div className="flex flex-wrap gap-2">
           <Button type="button" variant="outline" className="bg-card" onClick={() => generate.mutate({ id: jobId })} disabled={generate.isPending}>
-            <Sparkles className="mr-2 h-4 w-4" />{generate.isPending ? "Creating draft…" : form.contextMode === "limited" ? "Refresh factual outreach" : "Refresh tailored drafts"}
+            <Sparkles className="mr-2 h-4 w-4" />{generate.isPending ? "Creating drafts…" : form.contextMode === "limited" ? "Generate role-based resume & outreach" : "Refresh tailored drafts"}
           </Button>
           <Button type="submit" disabled={save.isPending}>{save.isPending ? "Saving…" : "Save changes"}</Button>
         </div>
@@ -342,8 +342,9 @@ export default function JobWorkspace() {
           <section className="studio-panel p-5">
             {form.contextMode === "limited" ? (
               <>
-                <p className="data-label text-primary">No JD Mode</p><h2 className="editorial-title mt-2 text-3xl">Email-first outreach</h2>
-                <p className="mt-3 text-sm leading-6 text-muted-foreground">No job description was supplied. The studio only creates a factual email asking for role details; your master resume stays unchanged.</p>
+                <p className="data-label text-primary">No JD Mode</p><h2 className="editorial-title mt-2 text-3xl">Role-based resume + outreach</h2>
+                <p className="mt-3 text-sm leading-6 text-muted-foreground">No job description was supplied. Generate a one-page role-based resume using the role title to prioritize only relevant, supported facts from your master profile, alongside a factual email that asks for the detailed role information.</p>
+                <p className="mt-2 text-xs leading-5 text-muted-foreground">This is not JD-tailored: the studio will not invent duties, skills, or employer requirements from the title alone.</p>
                 <div className="mt-5 space-y-2"><Label htmlFor="workspace-contact">Contact email</Label><Input id="workspace-contact" type="email" value={form.contactEmail} onChange={event => setForm({ ...form, contactEmail: event.target.value })} /></div>
               </>
             ) : (
@@ -366,7 +367,7 @@ export default function JobWorkspace() {
         <div className="space-y-6">
           <section className="studio-panel p-5">
             <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
-              <div><p className="data-label text-primary">Tailored resume</p><h2 className="editorial-title mt-1 text-3xl">A factual, one-page draft</h2><p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">The studio uses AI only to select, reorder, and rephrase facts from your master profile for this job. It follows the compact reference format and never adds unsupported claims.</p></div>
+              <div><p className="data-label text-primary">{form.contextMode === "limited" ? "Role-based resume" : "Tailored resume"}</p><h2 className="editorial-title mt-1 text-3xl">A factual, one-page draft</h2><p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">{form.contextMode === "limited" ? "With no job description, the studio uses your role title only to prioritize and rephrase supported master-profile facts. It never assumes the employer’s requirements." : "The studio uses AI only to select, reorder, and rephrase facts from your master profile for this job. It follows the compact reference format and never adds unsupported claims."}</p></div>
               <ExportActions content={form.tailoredResume} kind="resume" fileStem={fileStem} company={form.company} role={form.role} contactLinks={profile?.contactLinks} requiresApproval approved={resumeApproved} />
             </div>
             <div className="mt-5 rounded-xl border border-primary/15 bg-accent/30 p-4">
@@ -374,7 +375,7 @@ export default function JobWorkspace() {
                 <div className="flex gap-3"><Eye className="mt-0.5 h-4 w-4 shrink-0 text-primary" /><div><p className="text-sm font-semibold">Preview before export</p><p className="mt-1 text-xs leading-5 text-muted-foreground">This compact preview mirrors the one-page DOCX/PDF format. Saving edits or refreshing the draft returns it to review.</p></div></div>
                 <div className="shrink-0">{resumeApproved ? <Button type="button" size="sm" variant="outline" className="bg-card" disabled={setApproval.isPending} onClick={() => setApproval.mutate({ id: jobId, approved: false })}><RotateCcw className="mr-1.5 h-3.5 w-3.5" />Return to review</Button> : <Button type="button" size="sm" disabled={!form.tailoredResume.trim() || !resumeFits || resumeHasUnsavedEdits || setApproval.isPending} onClick={() => setApproval.mutate({ id: jobId, approved: true })}><CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />{resumeHasUnsavedEdits ? "Save edits to approve" : !resumeFits ? "Shorten to one page" : "Approve resume"}</Button>}</div>
               </div>
-              <div className="mt-4"><ResumePreview content={form.tailoredResume} contactLinks={profile?.contactLinks} /></div>
+              <div className="mt-4"><ResumePreview content={form.tailoredResume} contactLinks={profile?.contactLinks} emptyMessage={form.contextMode === "limited" ? "Generate a role-based resume to review it here before any export is enabled." : undefined} /></div>
               {resumeApproved ? <p className="mt-3 text-xs font-medium text-emerald-700 dark:text-emerald-300">Approved {resumeApprovedAt ? new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", year: "numeric" }).format(new Date(resumeApprovedAt)) : ""}. Export controls are enabled.</p> : <p className={`mt-3 text-xs ${!resumeFits && form.tailoredResume.trim() ? "font-medium text-amber-700 dark:text-amber-300" : "text-muted-foreground"}`}>{resumeHasUnsavedEdits ? "Save the edited resume, preview it again, then approve the saved version." : !resumeFits && form.tailoredResume.trim() ? "This draft is too long for the fixed one-page format. Remove or tighten a few bullets, save it, and preview again." : "Approve this reviewed version to enable copy, DOCX, and PDF exports."}</p>}
             </div>
             <div className="mt-4 rounded-lg border border-border/70 bg-background/40 p-3">

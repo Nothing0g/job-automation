@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildEmailMessages, buildLimitedContextEmailMessages, buildResumeMessages } from "./aiPrompts";
+import { buildEmailMessages, buildLimitedContextEmailMessages, buildResumeMessages, buildRoleBasedResumeMessages } from "./aiPrompts";
 
 const profile = {
   resumeText: "Analyst at Northstar. Built weekly reporting in SQL.",
@@ -37,5 +37,14 @@ describe("grounded AI prompts", () => {
     expect(String(messages[0].content)).toContain("has not provided a job description");
     expect(String(messages[0].content)).toContain("request the detailed job description");
     expect(String(messages[0].content)).toContain("tailored resume claim");
+  });
+
+  it("builds a role-based—not JD-tailored—resume request when no job description is available", () => {
+    const messages = buildRoleBasedResumeMessages(profile, { ...job, jobDescription: "", contextMode: "limited" });
+    expect(String(messages[0].content)).toContain("ROLE-BASED resume—not a JD-tailored resume");
+    expect(String(messages[0].content)).toContain("Do not infer the employer's duties, tools, priorities");
+    expect(String(messages[0].content)).toContain("Do not introduce commonly expected skills");
+    expect(String(messages[0].content)).toContain("under approximately 620 words");
+    expect(JSON.stringify(messages[1].content)).toContain("No job description was supplied.");
   });
 });

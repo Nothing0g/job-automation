@@ -129,6 +129,24 @@ describe("personal workspace routes", () => {
     expect(dbMocks.updateJobForUser).not.toHaveBeenCalled();
   });
 
+  it("requires a generated one-page role-based resume before a No JD application can be approved", async () => {
+    dbMocks.getJobForUser.mockResolvedValueOnce({ id: 10, contextMode: "limited", tailoredResume: null });
+
+    await expect(caller().jobs.setResumeApproval({ id: 10, approved: true })).rejects.toThrow("Generate or save a tailored resume");
+    expect(dbMocks.updateJobForUser).not.toHaveBeenCalled();
+
+    dbMocks.getJobForUser.mockResolvedValueOnce({
+      id: 10,
+      contextMode: "limited",
+      tailoredResume: "# Candidate Name\ncontact@example.com\n## EXPERIENCE\n### Product Intern\n- Built a documented research workflow.",
+    });
+    dbMocks.updateJobForUser.mockResolvedValue({ id: 10, tailoredResumeApprovedAt: new Date("2026-08-17T00:00:00.000Z") });
+
+    await caller().jobs.setResumeApproval({ id: 10, approved: true });
+
+    expect(dbMocks.updateJobForUser).toHaveBeenLastCalledWith(personalUser.id, 10, { tailoredResumeApprovedAt: expect.any(Date) });
+  });
+
   it("shortens an overlong generated resume before it is persisted", async () => {
     const overlong = `# Candidate Name\ncontact@example.com\n## EXPERIENCE\n${Array.from({ length: 150 }, (_, index) => `- Factual accomplishment ${index + 1} with a documented outcome and relevant implementation detail.`).join("\n")}`;
     const compact = "# Candidate Name\ncontact@example.com\n## EXPERIENCE\n### Analyst\n- Built a factual reporting workflow.";
@@ -144,5 +162,25 @@ describe("personal workspace routes", () => {
     await caller().jobs.generateDrafts({ id: 9 });
 
     expect(dbMocks.updateJobForUser).toHaveBeenLastCalledWith(personalUser.id, 9, expect.objectContaining({ tailoredResume: compact, tailoredResumeApprovedAt: null }));
+  });
+
+  it("generates a one-page role-based resume and factual outreach for a No JD application", async () => {
+    const roleBasedResume = "# Candidate Name\ncontact@example.com\n## EXPERIENCE\n### Product intern\n- Built a documented research workflow.";
+    dbMocks.getMasterProfile.mockResolvedValue({ resumeText: "Built a documented research workflow.", personalBio: null, emailSignature: "Best,\nCandidate", resumeFileKey: null });
+    dbMocks.getJobForUser.mockResolvedValue({ id: 10, company: "Brivo", role: "AI Product Intern", jobDescription: "", contextMode: "limited" });
+    llmMocks.listLLMModels.mockResolvedValue({ data: [{ id: "claude-sonnet-test" }] });
+    llmMocks.invokeLLM
+      .mockResolvedValueOnce({ choices: [{ message: { content: roleBasedResume } }] })
+      .mockResolvedValueOnce({ choices: [{ message: { content: "Hello,\n\nCould you share the job description?" } }] });
+    dbMocks.updateJobForUser.mockResolvedValue({ id: 10, tailoredResume: roleBasedResume });
+
+    await caller().jobs.generateDrafts({ id: 10 });
+
+    expect(String(llmMocks.invokeLLM.mock.calls[0][0].messages[0].content)).toContain("ROLE-BASED resume—not a JD-tailored resume");
+    expect(dbMocks.updateJobForUser).toHaveBeenLastCalledWith(personalUser.id, 10, expect.objectContaining({
+      tailoredResume: roleBasedResume,
+      tailoredResumeApprovedAt: null,
+      emailDraft: expect.stringContaining("Could you share the job description?"),
+    }));
   });
 });

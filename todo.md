@@ -124,3 +124,7 @@
 - [x] Research and add high-quality specialist job sources, including Wellfound and YC’s Work at a Startup, alongside the established job boards.
 - [ ] Verify a Gmail draft includes a real approved-resume attachment for a selected application with a stored recipient; Brivo remains ineligible because its recipient is empty.
 - [x] Defer the Gmail attachment-draft action until the user selects an application with a verified recipient email; no Brivo draft or send action was created.
+- [x] Explain the No JD role-based resume + outreach behavior directly in the workspace, including why it is not JD-tailored by default.
+- [x] Add an explicit, user-triggered one-page role-based resume option for No JD applications that uses the role title to prioritize, reorder, and carefully rephrase only supported master-profile facts; label it accurately as role-based rather than JD-tailored.
+- [x] Add regression coverage and visual validation for the No JD role-based resume option, its approval gate, and its no-fabrication boundary.
+- [x] Add focused server coverage that a No JD role-based resume still needs a generated reviewable draft before it can be approved for export.

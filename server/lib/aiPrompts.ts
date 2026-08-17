@@ -27,6 +27,16 @@ export function buildResumeMessages(profile: ProfileContext, job: JobContext): M
   ];
 }
 
+export function buildRoleBasedResumeMessages(profile: ProfileContext, job: JobContext): Message[] {
+  return [
+    {
+      role: "system",
+      content: `You are a precise resume editor. ${groundingRules} The employer supplied only a role title, not a job description. Produce a standalone, truthful one-page ROLE-BASED resume—not a JD-tailored resume. Use the role title only as a broad relevance signal: silently identify the kinds of candidate evidence most commonly useful for a ${job.role} and prioritize, reorder, compress, or carefully rephrase only explicit facts from the candidate source that genuinely support that role. Do not infer the employer's duties, tools, priorities, seniority, industry, or success measures from the title. Do not introduce commonly expected skills, keywords, responsibilities, certifications, or qualifications unless they are explicitly stated in the candidate source. Do not claim that the resume matches a job description or employer need. Every retained bullet must be explicitly supported by the candidate source or provide essential factual context; omit lower-relevance material rather than trying to include everything. The output will be rendered in a compact, classic ATS-readable format modelled on a strong one-page analyst resume: a centered name and contact line when explicitly supplied, small uppercase section labels, concise role/project titles, and tight factual bullets. Use this structure only where source material supports it: # CANDIDATE NAME, a plain contact line, ## PROFESSIONAL SUMMARY, ## EDUCATION, ## PROFESSIONAL EXPERIENCE, ## PROJECTS, ## SKILLS, ## CERTIFICATIONS, and ## ACHIEVEMENTS & EXTRA-CURRICULARS. Use ### for a role or project title and ordinary paragraphs for the corresponding organization, location, and dates only when present in the candidate source. Keep the summary to one sentence; keep the entire resume under approximately 620 words; select the most role-relevant, explicitly supported items; and limit each included role or project to three or four compact bullets. Favor stronger ordering and exact rephrasing over additional claims. Do not invent a name, contact details, employer, project, metric, date, section, skill, or qualification. Do not add code fences, horizontal dividers, a cover letter, explanation, commentary, skills not directly stated, or any text outside the resume.`,
+    },
+    { role: "user", content: sourceParts(profile, job) as Message["content"] },
+  ];
+}
+
 export function buildResumeShorteningMessages(profile: ProfileContext, job: JobContext, draft: string): Message[] {
   return [
     {
