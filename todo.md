@@ -130,3 +130,11 @@
 - [x] Add focused server coverage that a No JD role-based resume still needs a generated reviewable draft before it can be approved for export.
 - [x] Compare Google-account allowlist authentication with a passkey-only WebAuthn gate for a portable private deployment, including device-loss recovery.
 - [x] Define a portable hosting, database, storage, and Gmail OAuth draft-attachment migration plan that does not depend on Manus-specific services.
+- [x] Create a dedicated portable-migration branch from the preserved current version and map every remaining platform-specific runtime dependency.
+- [x] Introduce portable provider contracts for identity, file storage, optional resume drafting, and Gmail draft creation without changing current production behavior.
+- [x] Add Google-account allowlist authentication with a signed owner session, server-side ID-token validation, and no multi-user account surface.
+- [x] Implement a draft-only Gmail attachment flow that requires an approved resume and stored recipient, with no send endpoint.
+- [x] Replace platform storage routes with an S3-compatible object-storage adapter while retaining a safe local development fallback.
+- [x] Add Vercel-compatible server entry/configuration and document TiDB, R2, Google OAuth, and environment-variable setup without deploying.
+- [x] Add portable migration regression and security-boundary coverage, then visually validate the managed-mode dashboard and workspace shell.
+- [ ] Perform the live Google owner-sign-in, Gmail OAuth callback, approved-resume attachment draft, and S3/R2 round-trip checks after the user completes the external Vercel/TiDB/R2 setup.

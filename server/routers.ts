@@ -14,6 +14,7 @@ import { invokeLLM, listLLMModels } from "./_core/llm";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
 import { storageGetSignedUrl, storagePut } from "./storage";
+import { portableAuthEnabled } from "./portable/config";
 
 const statusSchema = z.enum(applicationStatuses);
 const dateInputSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
@@ -52,13 +53,26 @@ const createJobSchema = z.object(jobFields).superRefine((input, context) => {
   }
 });
 
-async function personalUser() {
+async function personalUser(currentUser: { id: number } | null = null) {
+  if (portableAuthEnabled()) {
+    if (!currentUser) {
+      throw new TRPCError({ code: "UNAUTHORIZED", message: "Sign in with the configured owner Google account to access this private workspace." });
+    }
+    return currentUser;
+  }
   try {
     return await db.getPersonalUser();
   } catch {
     throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Your personal workspace could not be initialized." });
   }
 }
+
+const portableOwnerProcedure = publicProcedure.use(({ ctx, next }) => {
+  if (portableAuthEnabled() && !ctx.user) {
+    throw new TRPCError({ code: "UNAUTHORIZED", message: "Sign in with the configured owner Google account to access this private workspace." });
+  }
+  return next();
+});
 
 function contentFrom(result: Awaited<ReturnType<typeof invokeLLM>>) {
   const content = result.choices[0]?.message.content;
@@ -97,23 +111,23 @@ export const appRouter = router({
     }),
   }),
   profile: router({
-    get: publicProcedure.query(async () => {
-      const user = await personalUser();
+    get: portableOwnerProcedure.query(async ({ ctx }) => {
+      const user = await personalUser(ctx.user);
       const profile = await db.getMasterProfile(user.id);
       return profile ? { ...profile, contactLinks: contactLinksFromStored(profile.contactLinks) } : null;
     }),
-    save: publicProcedure
+    save: portableOwnerProcedure
       .input(z.object({ resumeText: z.string().max(100_000).optional(), personalBio: z.string().max(20_000).optional(), emailSignature: z.string().max(6_000).optional(), contactLinks: contactLinksSchema.optional() }))
-      .mutation(async ({ input }) => {
-        const user = await personalUser();
+      .mutation(async ({ input, ctx }) => {
+        const user = await personalUser(ctx.user);
         const { contactLinks, ...profileInput } = input;
         const profile = await db.saveMasterProfile(user.id, { ...profileInput, ...(contactLinks ? { contactLinks: JSON.stringify(contactLinks) } : {}) });
         return profile ? { ...profile, contactLinks: contactLinksFromStored(profile.contactLinks) } : null;
       }),
-    uploadPdf: publicProcedure
+    uploadPdf: portableOwnerProcedure
       .input(z.object({ filename: z.string().min(1).max(255), mimeType: z.string(), base64: z.string().min(16).max(12_000_000) }))
-      .mutation(async ({ input }) => {
-        const user = await personalUser();
+      .mutation(async ({ input, ctx }) => {
+        const user = await personalUser(ctx.user);
         if (input.mimeType !== "application/pdf" && !input.filename.toLowerCase().endsWith(".pdf")) {
           throw new TRPCError({ code: "BAD_REQUEST", message: "Upload a PDF resume or paste the resume as text." });
         }
@@ -127,10 +141,10 @@ export const appRouter = router({
       }),
   }),
   jobs: router({
-    list: publicProcedure.query(async () => db.listJobs((await personalUser()).id)),
-    get: publicProcedure.input(z.object({ id: z.number().int().positive() })).query(async ({ input }) => db.getJobForUser((await personalUser()).id, input.id)),
-    create: publicProcedure.input(createJobSchema).mutation(async ({ input }) => {
-      const user = await personalUser();
+    list: portableOwnerProcedure.query(async ({ ctx }) => db.listJobs((await personalUser(ctx.user)).id)),
+    get: portableOwnerProcedure.input(z.object({ id: z.number().int().positive() })).query(async ({ input, ctx }) => db.getJobForUser((await personalUser(ctx.user)).id, input.id)),
+    create: portableOwnerProcedure.input(createJobSchema).mutation(async ({ input, ctx }) => {
+      const user = await personalUser(ctx.user);
       return db.createJob(user.id, {
         ...input,
         jobDescription: input.jobDescription || "",
@@ -140,7 +154,7 @@ export const appRouter = router({
         followUpAt: parseFollowUpDate(input.followUpAt),
       });
     }),
-    importPublicLink: publicProcedure
+    importPublicLink: portableOwnerProcedure
       .input(z.object({ url: z.string().trim().url().max(2_000) }))
       .mutation(async ({ input }) => {
         try {
@@ -149,7 +163,7 @@ export const appRouter = router({
           throw new TRPCError({ code: "BAD_REQUEST", message: error instanceof Error ? error.message : "This public job link could not be imported." });
         }
       }),
-    update: publicProcedure
+    update: portableOwnerProcedure
       .input(z.object({
         id: z.number().int().positive(),
         company: jobFields.company.optional(),
@@ -165,8 +179,8 @@ export const appRouter = router({
         nextAction: jobFields.nextAction,
         followUpAt: jobFields.followUpAt,
       }))
-      .mutation(async ({ input }) => {
-        const user = await personalUser();
+      .mutation(async ({ input, ctx }) => {
+        const user = await personalUser(ctx.user);
         const { id, followUpAt, nextAction, ...data } = input;
         const resumeChanged = data.tailoredResume !== undefined;
         const targetChanged = ["company", "role", "jobDescription", "contextMode"].some(field => data[field as keyof typeof data] !== undefined);
@@ -179,10 +193,10 @@ export const appRouter = router({
         if (!updated) throw new TRPCError({ code: "NOT_FOUND", message: "This job no longer exists." });
         return updated;
       }),
-    setResumeApproval: publicProcedure
+    setResumeApproval: portableOwnerProcedure
       .input(z.object({ id: z.number().int().positive(), approved: z.boolean() }))
-      .mutation(async ({ input }) => {
-        const user = await personalUser();
+      .mutation(async ({ input, ctx }) => {
+        const user = await personalUser(ctx.user);
         const job = await db.getJobForUser(user.id, input.id);
         if (!job) throw new TRPCError({ code: "NOT_FOUND", message: "This job no longer exists." });
         if (input.approved && !job.tailoredResume?.trim()) {
@@ -193,10 +207,10 @@ export const appRouter = router({
         }
         return db.updateJobForUser(user.id, job.id, { tailoredResumeApprovedAt: input.approved ? new Date() : null });
       }),
-    generateDrafts: publicProcedure
+    generateDrafts: portableOwnerProcedure
       .input(z.object({ id: z.number().int().positive() }))
-      .mutation(async ({ input }) => {
-        const user = await personalUser();
+      .mutation(async ({ input, ctx }) => {
+        const user = await personalUser(ctx.user);
         const [profile, job] = await Promise.all([db.getMasterProfile(user.id), db.getJobForUser(user.id, input.id)]);
         if (!job) throw new TRPCError({ code: "NOT_FOUND", message: "This job no longer exists." });
         if (!profile || (!profile.resumeText?.trim() && !profile.resumeFileKey)) {

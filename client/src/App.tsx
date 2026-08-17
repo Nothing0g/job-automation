@@ -2,6 +2,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import DashboardLayout from "@/components/DashboardLayout";
 import ErrorBoundary from "./components/ErrorBoundary";
+import { PortableOwnerAccess } from "./components/PortableOwnerAccess";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import JobsDashboard from "./pages/JobsDashboard";
 import JobWorkspace from "./pages/JobWorkspace";
@@ -15,5 +16,5 @@ function Router() {
 }
 
 export default function App() {
-  return <ErrorBoundary><ThemeProvider defaultTheme="light" switchable><TooltipProvider><Toaster richColors /><Router /></TooltipProvider></ThemeProvider></ErrorBoundary>;
+  return <ErrorBoundary><ThemeProvider defaultTheme="light" switchable><TooltipProvider><Toaster richColors /><PortableOwnerAccess><Router /></PortableOwnerAccess></TooltipProvider></ThemeProvider></ErrorBoundary>;
 }

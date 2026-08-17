@@ -3,6 +3,26 @@
 // Downloads return /manus-storage/{key} paths served via 307 redirect.
 
 import { ENV } from "./_core/env";
+import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { portableObjectKey, portableObjectStorageConfig } from "./portable/objectStorage";
+
+function portableClient() {
+  const config = portableObjectStorageConfig();
+  if (!config) return null;
+  return {
+    client: new S3Client({
+      endpoint: config.endpoint,
+      region: config.region,
+      credentials: {
+        accessKeyId: config.accessKeyId,
+        secretAccessKey: config.secretAccessKey,
+      },
+      forcePathStyle: true,
+    }),
+    bucket: config.bucket,
+  };
+}
 
 function getForgeConfig() {
   const forgeUrl = ENV.forgeApiUrl;
@@ -33,6 +53,20 @@ export async function storagePut(
   data: Buffer | Uint8Array | string,
   contentType = "application/octet-stream",
 ): Promise<{ key: string; url: string }> {
+  const portable = portableClient();
+  if (portable) {
+    const key = appendHashSuffix(portableObjectKey(relKey));
+    await portable.client.send(new PutObjectCommand({
+      Bucket: portable.bucket,
+      Key: key,
+      Body: data,
+      ContentType: contentType,
+    }));
+    return {
+      key,
+      url: await getSignedUrl(portable.client, new GetObjectCommand({ Bucket: portable.bucket, Key: key }), { expiresIn: 60 * 15 }),
+    };
+  }
   const { forgeUrl, forgeKey } = getForgeConfig();
   const key = appendHashSuffix(normalizeKey(relKey));
 
@@ -72,11 +106,27 @@ export async function storagePut(
 }
 
 export async function storageGet(relKey: string): Promise<{ key: string; url: string }> {
+  const portable = portableClient();
+  if (portable) {
+    const key = portableObjectKey(relKey);
+    return {
+      key,
+      url: await getSignedUrl(portable.client, new GetObjectCommand({ Bucket: portable.bucket, Key: key }), { expiresIn: 60 * 15 }),
+    };
+  }
   const key = normalizeKey(relKey);
   return { key, url: `/manus-storage/${key}` };
 }
 
 export async function storageGetSignedUrl(relKey: string): Promise<string> {
+  const portable = portableClient();
+  if (portable) {
+    return getSignedUrl(
+      portable.client,
+      new GetObjectCommand({ Bucket: portable.bucket, Key: portableObjectKey(relKey) }),
+      { expiresIn: 60 * 15 },
+    );
+  }
   const { forgeUrl, forgeKey } = getForgeConfig();
   const key = normalizeKey(relKey);
 

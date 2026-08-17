@@ -78,9 +78,25 @@ export const jobs = mysqlTable(
   ],
 );
 
+export const gmailConnections = mysqlTable(
+  "gmail_connections",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    userId: int("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    encryptedRefreshToken: text("encryptedRefreshToken").notNull(),
+    scopes: text("scopes").notNull(),
+    connectedAt: timestamp("connectedAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [uniqueIndex("gmail_connections_user_unique").on(table.userId)],
+);
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 export type MasterProfile = typeof masterProfiles.$inferSelect;
 export type Job = typeof jobs.$inferSelect;
+export type GmailConnection = typeof gmailConnections.$inferSelect;
 export type ApplicationStatus = (typeof applicationStatuses)[number];
 export type JobContextMode = (typeof jobContextModes)[number];

@@ -2,9 +2,11 @@ import { and, desc, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   ApplicationStatus,
+  GmailConnection,
   InsertUser,
   JobContextMode,
   User,
+  gmailConnections,
   jobs,
   masterProfiles,
   users,
@@ -63,6 +65,35 @@ export async function getPersonalUser() {
     find: async openId => (await db.select().from(users).where(eq(users.openId, openId)).limit(1))[0],
     create: async seed => { await db.insert(users).values(seed); },
   });
+}
+
+/** Creates the single durable workspace user used only outside the Manus runtime. */
+export async function getOrCreatePortableOwner(email: string, name?: string | null) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable");
+  const normalizedEmail = email.trim().toLowerCase();
+  const openId = `portable-google:${normalizedEmail}`;
+  const existing = await getUserByOpenId(openId);
+  if (existing) {
+    await db.update(users).set({ email: normalizedEmail, name: name ?? existing.name, loginMethod: "google", role: "admin", lastSignedIn: new Date() }).where(eq(users.id, existing.id));
+    return (await getUserByOpenId(openId))!;
+  }
+  await db.insert(users).values({ openId, email: normalizedEmail, name: name ?? "Private owner", loginMethod: "google", role: "admin", lastSignedIn: new Date() });
+  return (await getUserByOpenId(openId))!;
+}
+
+export async function getGmailConnection(userId: number): Promise<GmailConnection | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(gmailConnections).where(eq(gmailConnections.userId, userId)).limit(1);
+  return result[0];
+}
+
+export async function saveGmailConnection(userId: number, data: { encryptedRefreshToken: string; scopes: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable");
+  await db.insert(gmailConnections).values({ userId, ...data }).onDuplicateKeyUpdate({ set: { ...data, updatedAt: new Date() } });
+  return getGmailConnection(userId);
 }
 
 export async function getMasterProfile(userId: number) {

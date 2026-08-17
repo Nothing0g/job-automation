@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { GmailComposeAction } from "@/components/GmailComposeAction";
+import { GmailDraftAttachmentAction } from "@/components/GmailDraftAttachmentAction";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -400,11 +401,12 @@ export default function JobWorkspace() {
                   recipient={form.contactEmail}
                   onComposeOpen={recipientKnown => toast.success(recipientKnown ? "Gmail compose opened in a new tab. Review and send it manually when ready." : "Gmail compose opened. Add the recipient there, then review and send it manually.")}
                 />
+                <GmailDraftAttachmentAction jobId={jobId} eligible={resumeApproved && hasRecipient && Boolean(form.emailDraft.trim())} saveRequired={resumeHasUnsavedEdits || form.contactEmail !== (job.contactEmail ?? "") || form.emailDraft !== (job.emailDraft ?? "")} />
                 <ExportActions content={form.emailDraft} kind="cover-letter" fileStem={fileStem} company={form.company} role={form.role} contactLinks={profile?.contactLinks} />
               </div>
             </div>
             <Textarea value={form.emailDraft} onChange={event => setForm({ ...form, emailDraft: event.target.value })} placeholder="Generate a personalized draft grounded in your profile and this job description…" className="mt-5 min-h-64 leading-6" />
-            <p className="mt-3 text-xs text-muted-foreground">Gmail opens in a separate tab with the subject and draft prepared. {hasRecipient ? "Review everything there and press Send yourself." : "Add the recipient in Gmail, then review everything and press Send yourself."}</p>
+            <p className="mt-3 text-xs text-muted-foreground">Gmail opens in a separate tab with the subject and draft prepared. When portable Gmail is connected, <strong>Draft with resume</strong> creates an unsent Gmail draft with the approved DOCX attached. {hasRecipient ? "Review everything there and press Send yourself." : "Add the recipient in Gmail, then review everything and press Send yourself."}</p>
           </section>
         </div>
       </div>
