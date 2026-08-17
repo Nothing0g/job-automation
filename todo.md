@@ -60,22 +60,22 @@
 - [x] Manually verify clickable contact links in exported DOCX and PDF cover letters.
 - [x] Perform and record visual QA of the redesigned workspace in both light and dark modes.
 - [x] Assert PDF URI annotations directly in automated document-export coverage.
-- [ ] Verify the exported contact links through an end-to-end open-and-click workflow and record the result.
+- [ ] Verify the exported contact links through an end-to-end open-and-click workflow when the user chooses an installed local document viewer; export relationships remain programmatically verified.
 - [x] Verify and document the ATS-safe resume structure and export constraints.
 - [x] Add a manual Gmail compose action that pre-fills the recipient, subject, and personalized email draft without sending it.
 - [x] Add automated coverage and manual validation for the Gmail compose URL and its manual-send boundary.
 - [x] Document the ATS-safe resume structure and export constraints in the QA record using the implemented preview and export rules.
 - [x] Re-read the QA record to confirm the ATS-safe resume documentation and Gmail no-send boundary are both preserved.
-- [ ] Validate the Gmail compose handoff in the browser, confirming recipient, subject, and body prefill while retaining the user-only Send action.
+- [ ] Validate the Gmail compose handoff in a real signed-in Gmail session when a selected application has a verified recipient; subject/body handoff and the manual-send boundary remain covered by tests.
 - [x] Diagnose and fix the Gmail compose action so its manual handoff works reliably in the application workspace.
 - [x] Add a downloadable Excel workbook of the current application tracker with all available job, status, follow-up, source, and draft-detail fields.
 - [x] Add automated coverage and manual validation for the repaired Gmail handoff and spreadsheet export contents.
-- [ ] Manually validate the Gmail compose handoff with a real browser click and confirm recipient, subject, and body prefill while Send remains user-controlled.
+- [ ] Manually validate recipient prefill and the user-only Send action in Gmail when a selected application has a verified recipient; the current Brivo handoff correctly demonstrates the missing-recipient state.
 - [x] Require and persist a recipient email in Full Details job intake, while preserving No JD flexibility.
 - [x] Remove Gmail body wrapper text and separators so the composed draft contains only the personalized email content.
-- [ ] Add an approved tailored-resume attachment handoff to Gmail with a truthful manual-send boundary.
+- [ ] Add an approved tailored-resume attachment handoff to Gmail with a truthful manual-send boundary when an application with a verified recipient is selected.
 - [x] Strengthen tailoring prompts and validation so each resume selectively emphasizes, rephrases, and removes content against the specific JD or role without fabrication.
-- [ ] Add automated and manual validation for recipient prefill, clean Gmail content, resume attachment handoff, and role-specific tailoring.
+- [ ] Add automated and manual validation for recipient prefill, clean Gmail content, resume attachment handoff, and role-specific tailoring when the attachment workflow is implemented.
 - [x] Remove literal Markdown heading markers from the on-screen tailored-resume preview while retaining its section hierarchy.
 - [x] Add regression coverage that the preview renderer cleans heading markers as well as fences and dividers.
 - [x] Make the tailored-resume workspace preview-first so raw editing syntax is hidden until the user explicitly chooses to edit the source draft.
@@ -115,12 +115,12 @@
 - [x] Evaluate compliant live-job data sources and select an API-backed approach for displaying listings inside the application.
 - [x] Configure and verify server-side Adzuna credentials with a lightweight live jobs request.
 - [x] Obtain explicit Gmail authorization before adding any attachment-capable email workflow.
-- [ ] Add a manual-send Gmail attachment workflow for an approved resume only after authorization is available.
+- [ ] Add a manual-send Gmail attachment workflow for an approved resume only after a selected application has a verified recipient email.
 - [x] Replace outbound-only Job Discovery cards with in-app API-backed live job cards once a supported data source is authorized.
-- [ ] Add automated and manual validation for the preserved backup, authorized Gmail workflow, and in-app job listing view.
+- [ ] Add automated and manual validation for the authorized Gmail attachment workflow when a selected application has a verified recipient; the preserved backup and targeted provider-search replacement are already validated.
 - [x] Verify the authorized Gmail integration supports saving a draft with attachments; additional inbox and label capabilities remain unused.
-- [ ] Document and implement an application-level restriction so the job workflow can only prepare a manual-send draft with an approved resume attachment.
+- [ ] Implement and test an attachment-capable Gmail draft flow that is available only when an application has both a verified recipient email and an approved tailored resume.
 - [x] Restore Job Discovery to a redirect-first experience with role, location, and available freshness filters embedded in provider search URLs.
 - [x] Research and add high-quality specialist job sources, including Wellfound and YC’s Work at a Startup, alongside the established job boards.
-- [ ] Verify the Brivo Gmail draft uses a stored recipient and contains the approved resume as a real attachment rather than relying on a compose URL.
-- [ ] Defer the Gmail attachment-draft action until the user selects an application with a verified recipient email; do not create or send a Brivo draft without that address.
+- [ ] Verify a Gmail draft includes a real approved-resume attachment for a selected application with a stored recipient; Brivo remains ineligible because its recipient is empty.
+- [x] Defer the Gmail attachment-draft action until the user selects an application with a verified recipient email; no Brivo draft or send action was created.
