@@ -9,6 +9,7 @@ import { parseFollowUpDate } from "./lib/jobTracker";
 import { appendEmailSignature } from "./lib/emailSignature";
 import { cleanEmailDraft } from "./lib/emailDraft";
 import { resumeFitsOnePage } from "./lib/onePageResume";
+import { adzunaMarkets, searchLiveJobs } from "./lib/adzuna";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { invokeLLM, listLLMModels } from "./_core/llm";
 import { systemRouter } from "./_core/systemRouter";
@@ -18,6 +19,7 @@ import { storageGetSignedUrl, storagePut } from "./storage";
 const statusSchema = z.enum(applicationStatuses);
 const dateInputSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const optionalUrl = z.union([z.string().trim().url().max(1_000), z.literal("")]);
+const adzunaMarketSchema = z.enum(adzunaMarkets.map(market => market.code) as [typeof adzunaMarkets[number]["code"], ...typeof adzunaMarkets[number]["code"][]]);
 const contactLinksSchema = z.object({
   email: z.union([z.string().trim().email().max(320), z.literal("")]),
   phone: z.string().trim().max(80),
@@ -123,6 +125,21 @@ export const appRouter = router({
         const safeFilename = input.filename.replace(/[^a-zA-Z0-9._-]/g, "-");
         const stored = await storagePut(`personal-workspace/master-resume/${safeFilename}`, bytes, "application/pdf");
         return db.saveMasterProfile(user.id, { resumeFileKey: stored.key });
+      }),
+  }),
+  jobDiscovery: router({
+    search: publicProcedure
+      .input(z.object({
+        role: z.string().trim().min(2).max(160),
+        location: z.string().trim().max(160).optional().default(""),
+        market: adzunaMarketSchema.default("in"),
+      }))
+      .query(async ({ input }) => {
+        try {
+          return await searchLiveJobs(input);
+        } catch (error) {
+          throw new TRPCError({ code: "BAD_GATEWAY", message: error instanceof Error ? error.message : "The live job search is unavailable right now." });
+        }
       }),
   }),
   jobs: router({

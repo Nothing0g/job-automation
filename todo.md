@@ -111,3 +111,12 @@
 - [x] Build role and optional-location search links for selected trusted public job sources without copying third-party listings.
 - [x] Add regression coverage for the role/location outbound search-link builder.
 - [x] Visually validate the responsive Job Discovery experience and record the result.
+- [x] Create and verify a private GitHub backup repository named with “preserve version” before altering the current application.
+- [x] Evaluate compliant live-job data sources and select an API-backed approach for displaying listings inside the application.
+- [x] Configure and verify server-side Adzuna credentials with a lightweight live jobs request.
+- [x] Obtain explicit Gmail authorization before adding any attachment-capable email workflow.
+- [ ] Add a manual-send Gmail attachment workflow for an approved resume only after authorization is available.
+- [x] Replace outbound-only Job Discovery cards with in-app API-backed live job cards once a supported data source is authorized.
+- [ ] Add automated and manual validation for the preserved backup, authorized Gmail workflow, and in-app job listing view.
+- [x] Verify the authorized Gmail integration supports saving a draft with attachments; additional inbox and label capabilities remain unused.
+- [ ] Document and implement an application-level restriction so the job workflow can only prepare a manual-send draft with an approved resume attachment.
