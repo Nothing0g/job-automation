@@ -33,13 +33,9 @@ The portable branch keeps the core application in TypeScript/Express/React and a
 
 ## Database migration
 
-The portable path adds a non-destructive `gmail_connections` table that stores one encrypted Gmail refresh token per owner. With `DATABASE_URL` pointed at TiDB, apply the reviewed migrations before first deployment:
+The portable path adds a non-destructive `gmail_connections` table that stores one encrypted Gmail refresh token per owner. The Vercel build runs the reviewed Drizzle migrations before building the application, so the initial deployment initializes an empty TiDB `job_automation` database after `DATABASE_URL` has been configured in Vercel. Later deployments record completed migrations and do not reapply them.
 
-```bash
-pnpm drizzle-kit migrate
-```
-
-Verify the schema in TiDB afterwards. Do not run destructive reset commands against the existing personal data.
+Verify the schema in TiDB after the first successful deployment. Do not run destructive reset commands against personal data.
 
 ## Vercel configuration
 
