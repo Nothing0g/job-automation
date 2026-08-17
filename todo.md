@@ -73,7 +73,7 @@
 - [ ] Manually validate recipient prefill and the user-only Send action in Gmail when a selected application has a verified recipient; the current Brivo handoff correctly demonstrates the missing-recipient state.
 - [x] Require and persist a recipient email in Full Details job intake, while preserving No JD flexibility.
 - [x] Remove Gmail body wrapper text and separators so the composed draft contains only the personalized email content.
-- [ ] Add an approved tailored-resume attachment handoff to Gmail with a truthful manual-send boundary when an application with a verified recipient is selected.
+- [x] Add an approved tailored-resume attachment handoff to Gmail with a truthful manual-send boundary when an application with a verified recipient is selected.
 - [x] Strengthen tailoring prompts and validation so each resume selectively emphasizes, rephrases, and removes content against the specific JD or role without fabrication.
 - [ ] Add automated and manual validation for recipient prefill, clean Gmail content, resume attachment handoff, and role-specific tailoring when the attachment workflow is implemented.
 - [x] Remove literal Markdown heading markers from the on-screen tailored-resume preview while retaining its section hierarchy.
@@ -115,11 +115,11 @@
 - [x] Evaluate compliant live-job data sources and select an API-backed approach for displaying listings inside the application.
 - [x] Configure and verify server-side Adzuna credentials with a lightweight live jobs request.
 - [x] Obtain explicit Gmail authorization before adding any attachment-capable email workflow.
-- [ ] Add a manual-send Gmail attachment workflow for an approved resume only after a selected application has a verified recipient email.
+- [x] Add a manual-send Gmail attachment workflow for an approved resume only after a selected application has a verified recipient email.
 - [x] Replace outbound-only Job Discovery cards with in-app API-backed live job cards once a supported data source is authorized.
 - [ ] Add automated and manual validation for the authorized Gmail attachment workflow when a selected application has a verified recipient; the preserved backup and targeted provider-search replacement are already validated.
 - [x] Verify the authorized Gmail integration supports saving a draft with attachments; additional inbox and label capabilities remain unused.
-- [ ] Implement and test an attachment-capable Gmail draft flow that is available only when an application has both a verified recipient email and an approved tailored resume.
+- [x] Implement and test an attachment-capable Gmail draft flow that is available only when an application has both a verified recipient email and an approved tailored resume.
 - [x] Restore Job Discovery to a redirect-first experience with role, location, and available freshness filters embedded in provider search URLs.
 - [x] Research and add high-quality specialist job sources, including Wellfound and YC’s Work at a Startup, alongside the established job boards.
 - [ ] Verify a Gmail draft includes a real approved-resume attachment for a selected application with a stored recipient; Brivo remains ineligible because its recipient is empty.
@@ -138,3 +138,4 @@
 - [x] Add Vercel-compatible server entry/configuration and document TiDB, R2, Google OAuth, and environment-variable setup without deploying.
 - [x] Add portable migration regression and security-boundary coverage, then visually validate the managed-mode dashboard and workspace shell.
 - [ ] Perform the live Google owner-sign-in, Gmail OAuth callback, approved-resume attachment draft, and S3/R2 round-trip checks after the user completes the external Vercel/TiDB/R2 setup.
+- [x] Assess GitHub Student Developer Pack benefits for hosting, database, storage, and domain support, then recommend the simplest private deployment path before resuming portable migration work.
