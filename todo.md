@@ -147,3 +147,4 @@
 - [x] Resolve the TiDB sign-up interaction with the user before creating any account or database resource.
 - [x] Remove the portable deployment's required R2 configuration and prevent platform-storage fallback when portable mode is active without a configured external object store.
 - [x] Supersede the previously planned live S3/R2 round-trip check for the selected no-R2 deployment path; retain only TiDB, Google sign-in, Gmail OAuth, and draft-attachment live checks.
+- [ ] Synchronize the validated no-R2 and TiDB migration-preparation changes to the private GitHub repository before Vercel project creation.
