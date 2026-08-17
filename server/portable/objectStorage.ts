@@ -15,6 +15,10 @@ export function portableObjectStorageConfig(env: NodeJS.ProcessEnv = process.env
   return { endpoint, bucket, accessKeyId, secretAccessKey, region: env.S3_REGION?.trim() || "auto" };
 }
 
+export function portableObjectStorageDisabled(env: NodeJS.ProcessEnv = process.env) {
+  return env.PORTABLE_AUTH_ENABLED === "true" && portableObjectStorageConfig(env) === null;
+}
+
 export function portableObjectKey(relativeKey: string) {
   const normalized = relativeKey.replace(/^\/+/, "");
   if (!normalized || normalized.includes("..")) throw new Error("Invalid object-storage key.");

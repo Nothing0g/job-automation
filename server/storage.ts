@@ -5,7 +5,7 @@
 import { ENV } from "./_core/env";
 import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { portableObjectKey, portableObjectStorageConfig } from "./portable/objectStorage";
+import { portableObjectKey, portableObjectStorageConfig, portableObjectStorageDisabled } from "./portable/objectStorage";
 
 function portableClient() {
   const config = portableObjectStorageConfig();
@@ -25,6 +25,11 @@ function portableClient() {
 }
 
 function getForgeConfig() {
+  if (portableObjectStorageDisabled()) {
+    throw new Error(
+      "External object storage is disabled for this portable deployment. Keep original files locally or in your own Google Drive; approved resume exports and Gmail attachments are generated from stored text.",
+    );
+  }
   const forgeUrl = ENV.forgeApiUrl;
   const forgeKey = ENV.forgeApiKey;
 

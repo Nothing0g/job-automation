@@ -139,3 +139,11 @@
 - [x] Add portable migration regression and security-boundary coverage, then visually validate the managed-mode dashboard and workspace shell.
 - [ ] Perform the live Google owner-sign-in, Gmail OAuth callback, approved-resume attachment draft, and S3/R2 round-trip checks after the user completes the external Vercel/TiDB/R2 setup.
 - [x] Assess GitHub Student Developer Pack benefits for hosting, database, storage, and domain support, then recommend the simplest private deployment path before resuming portable migration work.
+- [x] Evaluate no-card local and free storage alternatives, including local-only use and Google Drive, before selecting any external portable deployment provider.
+- [x] Design a hosted, no-R2 deployment path that supports private access from mobile and other computers while keeping external account setup and file storage minimal.
+- [x] Prepare and validate the approved Vercel + TiDB deployment path without Cloudflare R2, including database-only document handling, owner-only access, and Gmail draft safeguards.
+- [x] Compare a user-operated MySQL database with managed TiDB for secure private access from mobile and other computers before provisioning either option.
+- [ ] Provision the selected Vercel + TiDB deployment path with no R2 dependency, preserving owner-only Google access and draft-only Gmail behavior.
+- [x] Resolve the TiDB sign-up interaction with the user before creating any account or database resource.
+- [x] Remove the portable deployment's required R2 configuration and prevent platform-storage fallback when portable mode is active without a configured external object store.
+- [x] Supersede the previously planned live S3/R2 round-trip check for the selected no-R2 deployment path; retain only TiDB, Google sign-in, Gmail OAuth, and draft-attachment live checks.

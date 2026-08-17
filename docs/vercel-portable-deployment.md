@@ -1,4 +1,4 @@
-# Portable private deployment: Vercel, TiDB Cloud, R2, Google OAuth, and Gmail drafts
+# Portable private deployment: Vercel, TiDB Cloud, Google OAuth, and Gmail drafts
 
 ## What this migration changes
 
@@ -11,7 +11,7 @@ The portable branch keeps the core application in TypeScript/Express/React and a
 | Resume attachment | Server-generated DOCX from the already approved resume | The attachment route rejects drafts lacking a recipient, email body, resume, or approval timestamp. |
 | Gmail operation | Gmail API `users.drafts.create` only | There is no send endpoint. The user opens Gmail and presses Send manually. |
 | Database | TiDB Cloud Serverless (MySQL-compatible) | Use the TLS `DATABASE_URL` supplied by TiDB; do not expose it to the browser. |
-| Files | Cloudflare R2 (S3-compatible) | Access keys remain server-side; the browser receives only short-lived signed URLs. |
+| Original resume files and downloaded exports | User-controlled local files or Google Drive | The portable app does not retain raw source documents; exports and Gmail attachments are generated from the approved resume text. |
 | Hosting | Vercel serverless function + static React build | The source is portable Express code with a Vercel handler under `api/index.ts`. |
 
 ## Before deployment
@@ -19,7 +19,7 @@ The portable branch keeps the core application in TypeScript/Express/React and a
 > Keep the current repository and the dedicated `job-automation-preserve-version` backup unchanged. Work from the `portable-migration` branch until all callback and draft checks pass.
 
 1. Create a **TiDB Cloud Serverless** cluster and database. Copy its TLS connection string.
-2. Create a private **Cloudflare R2** bucket named `job-automation-private`. Create an R2 API token scoped only to that bucket with object read/write permissions.
+2. Keep any original resume file and downloaded exports in your own local files or Google Drive. In portable mode, enter the master resume content in the app; no object-storage account is required.
 3. In Google Cloud Console, configure an OAuth **Web application** client. Add the final Vercel callbacks exactly:
 
    ```text
@@ -29,7 +29,7 @@ The portable branch keeps the core application in TypeScript/Express/React and a
 
    Add `https://your-project.vercel.app` as an authorized JavaScript origin. Keep the localhost callbacks during development. Do not use placeholders, whitespace, or wildcard domains.
 4. Put the owner’s Google address on the OAuth consent-screen **Test users** list while testing. For a consumer Google account in testing mode, reauthorization may be needed periodically; a production OAuth publishing/verification decision is needed before treating Gmail access as permanent.
-5. Generate two unrelated 32+ character secrets for `OWNER_SESSION_SECRET` and `GMAIL_TOKEN_ENCRYPTION_KEY`. Store all values in Vercel’s encrypted environment-variable settings, not source control.
+5. Generate two unrelated 32+ character secrets for `OWNER_SESSION_SECRET` and `GMAIL_TOKEN_ENCRYPTION_KEY`. Store all values in Vercel’s encrypted environment-variable settings, not source control. No `S3_*` values are needed.
 
 ## Database migration
 
@@ -58,9 +58,9 @@ Verify the schema in TiDB afterwards. Do not run destructive reset commands agai
 5. Press **Draft with resume**. The server creates a Gmail **draft** with the approved DOCX attached. Inspect the Gmail Drafts folder. Do not press Send during validation.
 6. Confirm drafts without one of the four prerequisites are blocked. There is deliberately no API route that sends mail.
 
-## Portability and optional AI drafting
+## Database-only document handling and optional AI drafting
 
-The attachment feature does not call any AI service. It generates the DOCX from the reviewed resume text stored in the database. The current AI drafting feature remains a separate provider boundary: it may remain enabled in the managed environment or be replaced later with a user-selected AI provider. Do not place any server key in client-side `VITE_` variables.
+The portable deployment stores application records, master-profile text, and reviewed resume text in TiDB. It does not persist original resume PDFs/DOCX files or exported files in an external object bucket. The attachment feature does not call any AI service: it generates the DOCX from the reviewed resume text stored in the database. The current AI drafting feature remains a separate provider boundary: it may remain enabled in the managed environment or be replaced later with a user-selected AI provider. Do not place any server key in client-side `VITE_` variables.
 
 ## Recovery and rollback
 
