@@ -154,5 +154,6 @@
 - [x] Diagnose and correct the Vercel `drizzle-kit migrate` build failure before retrying the private TiDB-backed deployment.
 - [x] Configure Drizzle Kit’s TiDB migration connection with explicit, certificate-verifying TLS credentials and review the runtime database connector for the same requirement.
 - [x] Determine why Vercel still invokes Drizzle Kit’s insecure URL connection path and replace the migration mechanism with a TiDB-compatible certificate-verified approach.
-- [ ] Inspect the connected Vercel project’s failed deployment commit and logs, then verify the corrected build from the platform directly.
-- [ ] Reset or recover the TiDB password, update Vercel’s Production `DATABASE_URL` with the exact full connection string, and validate the successful database migration build.
+- [x] Inspect the connected Vercel project’s failed deployment commit and logs, then verify the corrected build from the platform directly.
+- [x] Reset or recover the TiDB password, update Vercel’s Production `DATABASE_URL` with the exact full connection string, and validate the successful database migration build.
+- [x] Prevent malformed unrelated browser cookies from crashing the portable owner-auth status endpoint, cover the regression, and validate the repaired production route locally before the production retry.

@@ -5,6 +5,7 @@ import { createDraftOnly, isEligibleForApprovedResumeDraft } from "./gmailDraft"
 import { googleAuthorizationUrl, exchangeGoogleCode, gmailAccessToken } from "./googleOAuth";
 import { encryptPortableSecret } from "./encryption";
 import { portableAuthEnabled, portableOAuthConfig } from "./config";
+import { parseRequestCookies } from "./cookies";
 import { createOwnerSession, verifyGoogleOwnerToken, verifyOwnerSession } from "./ownerSession";
 import { approvedResumeFilename, createApprovedResumeDocx, type ResumeContactLinks } from "./resumeAttachment";
 
@@ -13,7 +14,7 @@ const OWNER_STATE_COOKIE = "job_automation_google_state";
 const GMAIL_STATE_COOKIE = "job_automation_gmail_state";
 
 function cookies(req: Request) {
-  return Object.fromEntries((req.headers.cookie ?? "").split(";").map(value => value.trim()).filter(Boolean).map(value => { const index = value.indexOf("="); return index < 0 ? [value, ""] : [value.slice(0, index), decodeURIComponent(value.slice(index + 1))]; }));
+  return parseRequestCookies(req.headers.cookie);
 }
 
 function cookieOptions(req: Request) {
