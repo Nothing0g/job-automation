@@ -17,3 +17,5 @@ Vercel built commit `0e1f0d2f` successfully as production deployment `dpl_CGWDAZ
 ### Serverless bootstrap diagnostics
 
 The current Vercel build completes the database migrations and creates the production deployment, but the protected diagnostic fetch of the exact deployment still returns `FUNCTION_INVOCATION_FAILED` before a route response is produced. The serverless entry now initializes the Express application lazily and writes bootstrap failures to Vercel runtime logs while returning only a generic error to browsers. This preserves secrecy of environment values and will make the next production invocation reveal the concrete fault rather than an opaque Vercel error page.
+
+The controlled request identified the concrete packaging issue: Vercel's ESM output did not include dynamically imported local application modules (`ERR_MODULE_NOT_FOUND` for `/var/task/server/_core/app`). The entry keeps lazy application construction but now uses static imports, allowing Vercel to bundle the factory and static-serving helper while retaining safe startup diagnostics.

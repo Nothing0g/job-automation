@@ -1,5 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Express } from "express";
+import { createApiApp } from "../server/_core/app";
+import { serveStatic } from "../server/_core/vite";
 
 let application: Express | undefined;
 let initialization: Promise<Express> | undefined;
@@ -15,11 +17,8 @@ export async function initializeApiApp(): Promise<Express> {
   if (application) return application;
 
   if (!initialization) {
-    initialization = Promise.all([
-      import("../server/_core/app"),
-      import("../server/_core/vite"),
-    ])
-      .then(([{ createApiApp }, { serveStatic }]) => {
+    initialization = Promise.resolve()
+      .then(() => {
         const app = createApiApp();
 
         // Static delivery remains after API/OAuth routes so callback endpoints
