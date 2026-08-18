@@ -159,3 +159,7 @@
 - [x] Prevent malformed unrelated browser cookies from crashing the portable owner-auth status endpoint, cover the regression, and validate the repaired production route locally before the production retry.
 - [x] Diagnose and prevent the remaining Vercel API serverless bootstrap failure, with production-safe error logging and a production owner-auth status validation (`200`, signed out).
 - [ ] Set the production URL in Vercel and Google OAuth redirect configuration, then validate owner-only Google sign-in and Gmail OAuth draft access.
+- [x] Diagnose and correct the live Google OAuth `invalid_client` failure by reconciling the Vercel client ID/secret and production callbacks with one Web application OAuth client, then validate an owner-only sign-in.
+- [ ] Add the allowlisted owner Google account as an OAuth test user for the unverified Gmail Compose scope, then validate Gmail connection and a manual-only approved-resume draft.
+- [x] Replace the malformed production Gmail token-encryption key with a securely generated Base64-encoded 32-byte key, redeploy, and restart Gmail authorization from a new connection request.
+- [x] Diagnose and repair the production role-based resume generation path that still requests `OPENAI_API_KEY` instead of the configured server-only Gemini provider, then validate a grounded draft can be approved for Gmail attachment.
