@@ -162,6 +162,11 @@
 - [x] Diagnose and correct the live Google OAuth `invalid_client` failure by reconciling the Vercel client ID/secret and production callbacks with one Web application OAuth client, then validate an owner-only sign-in.
 - [ ] Add the allowlisted owner Google account as an OAuth test user for the unverified Gmail Compose scope, then validate Gmail connection and a manual-only approved-resume draft.
 - [x] Replace the malformed production Gmail token-encryption key with a securely generated Base64-encoded 32-byte key, redeploy, and restart Gmail authorization from a new connection request.
-- [x] Diagnose and repair the production role-based resume generation path that still requests `OPENAI_API_KEY` instead of the configured server-only Gemini provider, then validate a grounded draft can be approved for Gmail attachment.
-- [ ] Replace the retired `models/gemini-2.5-flash` production API model with a currently available Gemini model, add regression coverage, and validate the live role-based generation flow.
+- [ ] Diagnose and repair the production role-based resume generation path that still requests `OPENAI_API_KEY` instead of the configured server-only Gemini provider, then validate a grounded draft can be approved for Gmail attachment.
+- [x] Replace the retired `models/gemini-2.5-flash` production API model with a currently available Gemini model, add regression coverage, and validate the live role-based generation flow.
+- [ ] Repair Gemini resume and outreach generation so it retrieves the full saved Master Profile, rejects incomplete one-page resume output, and produces a substantial factual email rather than generic partial drafts.
 - [x] Compare Claude API access against the current Gemini replacement for the user’s no-card, personal-use constraints before any provider migration is approved.
+- [x] Compare current Groq and NVIDIA hosted-API access, privacy, model support, and no-card constraints against Gemini before any provider migration is approved.
+- [x] Add Groq as a server-only fallback to Gemini while preserving the existing factual grounding, retry, and incomplete-draft rejection safeguards.
+- [x] Add an owner-only in-app AI provider selector for configured Gemini and Groq providers, show configuration status without exposing keys, and document Vercel-only secret setup.
+- [ ] Add `GROQ_API_KEY` to Vercel Production, deploy the provider-selector and grounding-quality repairs, and validate the selected provider live without exposing either API key.

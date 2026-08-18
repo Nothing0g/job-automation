@@ -23,6 +23,10 @@ export function portableGeminiApiKey(env: NodeJS.ProcessEnv = process.env) {
   return value;
 }
 
+export function portableGroqApiKey(env: NodeJS.ProcessEnv = process.env) {
+  return env.GROQ_API_KEY?.trim() || null;
+}
+
 export function portableOAuthConfig(env: NodeJS.ProcessEnv = process.env): PortableOAuthConfig {
   const baseUrl = required(env, "PORTABLE_APP_BASE_URL").replace(/\/$/, "");
   if (!/^https?:\/\//.test(baseUrl)) throw new Error("PORTABLE_APP_BASE_URL must begin with http:// or https://.");

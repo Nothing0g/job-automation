@@ -39,6 +39,9 @@ const statuses = [
   ["rejected", "Rejected"],
 ] as const;
 
+const draftProviderStorageKey = "job-automation:draft-provider";
+type DraftProvider = "gemini" | "groq";
+
 type WorkspaceForm = {
   company: string;
   role: string;
@@ -198,9 +201,11 @@ export default function JobWorkspace() {
   const utils = trpc.useUtils();
   const { data: job, isLoading } = trpc.jobs.get.useQuery({ id: jobId }, { enabled: Number.isFinite(jobId) });
   const { data: profile } = trpc.profile.get.useQuery();
+  const { data: providerStatus } = trpc.drafting.providers.useQuery();
   const [form, setForm] = useState<WorkspaceForm>(emptyForm);
   const [showResumeEditor, setShowResumeEditor] = useState(false);
   const [resumeApprovedAt, setResumeApprovedAt] = useState<Date | null>(null);
+  const [draftProvider, setDraftProvider] = useState<DraftProvider>("gemini");
 
   useEffect(() => {
     if (!job) return;
@@ -220,6 +225,13 @@ export default function JobWorkspace() {
     });
     setResumeApprovedAt(job.tailoredResumeApprovedAt ?? null);
   }, [job]);
+
+  useEffect(() => {
+    const storedProvider = window.localStorage.getItem(draftProviderStorageKey);
+    if (storedProvider === "gemini" || storedProvider === "groq") {
+      setDraftProvider(storedProvider);
+    }
+  }, []);
 
   const save = trpc.jobs.update.useMutation({
     onSuccess: data => {
@@ -302,6 +314,13 @@ export default function JobWorkspace() {
   });
   const hasRecipient = Boolean(form.contactEmail.trim());
   const gmailGuidance = gmailComposeGuidance(form.contactEmail);
+  const selectedProvider = providerStatus?.providers.find(provider => provider.id === draftProvider);
+  const selectedProviderConfigured = providerStatus ? Boolean(selectedProvider?.configured) : true;
+
+  function changeDraftProvider(provider: DraftProvider) {
+    setDraftProvider(provider);
+    window.localStorage.setItem(draftProviderStorageKey, provider);
+  }
 
   return (
     <form onSubmit={submit} className="studio-page mx-auto max-w-7xl space-y-6">
@@ -309,8 +328,16 @@ export default function JobWorkspace() {
         <Button asChild variant="ghost" className="w-fit px-0 text-muted-foreground hover:bg-transparent hover:text-foreground">
           <Link href="/"><ArrowLeft className="mr-2 h-4 w-4" />All applications</Link>
         </Button>
-        <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="outline" className="bg-card" onClick={() => generate.mutate({ id: jobId })} disabled={generate.isPending}>
+        <div className="flex flex-wrap items-end gap-2">
+          <div className="min-w-52 space-y-1">
+            <Label htmlFor="draft-provider" className="text-xs text-muted-foreground">AI provider</Label>
+            <select id="draft-provider" className="h-10 w-full rounded-md border bg-card px-3 text-sm" value={draftProvider} onChange={event => changeDraftProvider(event.target.value as DraftProvider)}>
+              <option value="gemini">Gemini{providerStatus && !providerStatus.providers.find(provider => provider.id === "gemini")?.configured ? " — needs Vercel key" : ""}</option>
+              <option value="groq">Groq{providerStatus && !providerStatus.providers.find(provider => provider.id === "groq")?.configured ? " — needs Vercel key" : ""}</option>
+            </select>
+            {providerStatus && !selectedProviderConfigured && <p className="text-[11px] leading-4 text-amber-700 dark:text-amber-300">Add {selectedProvider?.environmentKey} in Vercel, redeploy, then generate.</p>}
+          </div>
+          <Button type="button" variant="outline" className="bg-card" onClick={() => generate.mutate({ id: jobId, provider: draftProvider })} disabled={generate.isPending || !selectedProviderConfigured} title={!selectedProviderConfigured ? `Add ${selectedProvider?.environmentKey ?? "the provider key"} in Vercel Environment Variables, redeploy, then try again.` : undefined}>
             <Sparkles className="mr-2 h-4 w-4" />{generate.isPending ? "Creating drafts…" : form.contextMode === "limited" ? "Generate role-based resume & outreach" : "Refresh tailored drafts"}
           </Button>
           <Button type="submit" disabled={save.isPending}>{save.isPending ? "Saving…" : "Save changes"}</Button>

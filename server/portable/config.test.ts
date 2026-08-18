@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { portableAuthEnabled, portableGeminiApiKey, portableOAuthConfig, portableRedirect } from "./config";
+import { portableAuthEnabled, portableGeminiApiKey, portableGroqApiKey, portableOAuthConfig, portableRedirect } from "./config";
 import { decryptPortableSecret, encryptPortableSecret } from "./encryption";
 
 const env = {
@@ -33,5 +33,10 @@ describe("portable runtime configuration", () => {
   it("requires a Gemini key only when portable drafting is invoked", () => {
     expect(portableGeminiApiKey(env)).toBe("server-only-gemini-key");
     expect(() => portableGeminiApiKey({})).toThrow("GEMINI_API_KEY");
+  });
+
+  it("keeps the optional Groq fallback key server-side and disabled when absent", () => {
+    expect(portableGroqApiKey(env)).toBeNull();
+    expect(portableGroqApiKey({ ...env, GROQ_API_KEY: "server-only-groq-key" })).toBe("server-only-groq-key");
   });
 });

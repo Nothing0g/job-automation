@@ -21,6 +21,8 @@ vi.mock("./portable/gemini", () => ({
 }));
 
 import { appRouter } from "./routers";
+import { resumeDraftQualityIssue } from "./lib/draftQuality";
+import { resumeFitsOnePage } from "./lib/onePageResume";
 
 const personalUser = {
   id: 42,
@@ -218,6 +220,77 @@ describe("personal workspace routes", () => {
       tailoredResume: roleBasedResume,
       tailoredResumeApprovedAt: null,
       emailDraft: "Hello Hiring Team,",
+    }));
+  });
+
+  it("regenerates incomplete portable Gemini drafts before persisting a substantive saved profile", async () => {
+    const sourceResume = `SHUBHAM KUMAR
+PROFESSIONAL SUMMARY
+Product-minded engineering student with structured analysis and data work experience.
+EDUCATION
+B.Tech Mechanical Engineering at Delhi Technological University.
+PROFESSIONAL EXPERIENCE
+Product Research Intern at Northstar Labs. Interviewed users, mapped workflows, and documented product requirements.
+PROJECTS
+CultFit Fitness App Analytics: surveyed 20 users and analyzed feedback to prioritize onboarding improvements.
+SKILLS
+SQL, Python, user research, product analytics, and stakeholder communication.`;
+    const incompleteResume = `# SHUBHAM KUMAR
+Email
+## PROFESSIONAL SUMMARY
+Product-minded engineering student with structured analysis experience.
+## EDUCATION
+B.Tech Mechanical Engineering, Delhi Technological University.`;
+    const completeResume = `# SHUBHAM KUMAR
+Email · LinkedIn · GitHub
+## PROFESSIONAL SUMMARY
+Product-minded engineering student with structured analysis, user research, and data work experience.
+## EDUCATION
+B.Tech Mechanical Engineering, Delhi Technological University, with structured problem-solving practice.
+## PROFESSIONAL EXPERIENCE
+### Product Research Intern — Northstar Labs
+- Interviewed users and mapped workflows to document clear product requirements.
+- Organized research observations into concise records for product discussions.
+## PROJECTS
+### CultFit Fitness App Analytics
+- Surveyed 20 users and analyzed feedback to prioritize onboarding improvements.
+- Converted user evidence into structured experience-backed product ideas.
+## SKILLS
+SQL, Python, user research, product analytics, stakeholder communication, workflow mapping, and structured analysis.`;
+    const weakEmail = "Hello, I saw the Product Intern role at BLive. I am interested. Best, Shubham";
+    const completeEmail = `Hello,
+
+I came across the Product Intern opportunity at BLive and wanted to introduce myself. During my Product Research Intern work at Northstar Labs, I interviewed users, mapped workflows, and turned those observations into documented product requirements. I also built a CultFit Fitness App Analytics project where I surveyed 20 users and analyzed their feedback to prioritize onboarding improvements.
+
+Those experiences taught me to connect qualitative user evidence with structured analysis, while keeping the next product decision clear for stakeholders. I would appreciate the chance to learn whether the role is still open and, if so, review the detailed job description or application guidance.
+
+Best,
+Shubham Kumar`;
+    vi.stubEnv("PORTABLE_AUTH_ENABLED", "true");
+    vi.stubEnv("GEMINI_API_KEY", "test-server-only-key");
+    dbMocks.getMasterProfile.mockResolvedValue({ resumeText: sourceResume, personalBio: null, emailSignature: null, resumeFileKey: null });
+    dbMocks.getJobForUser.mockResolvedValue({ id: 10, company: "BLive", role: "Product Intern", jobDescription: "", contextMode: "limited" });
+    let resumeCalls = 0;
+    let emailCalls = 0;
+    geminiMocks.generateGeminiText.mockImplementation(async ({ maxOutputTokens }: { maxOutputTokens: number }) => {
+      if (maxOutputTokens === 2600) {
+        resumeCalls += 1;
+        return resumeCalls === 1 ? incompleteResume : completeResume;
+      }
+      emailCalls += 1;
+      return emailCalls === 1 ? weakEmail : completeEmail;
+    });
+    dbMocks.updateJobForUser.mockResolvedValue({ id: 10, tailoredResume: completeResume, emailDraft: completeEmail });
+
+    expect(resumeFitsOnePage(completeResume)).toBe(true);
+    expect(resumeDraftQualityIssue(completeResume, sourceResume)).toBeNull();
+    await portableCaller().jobs.generateDrafts({ id: 10 });
+
+    expect(geminiMocks.generateGeminiText).toHaveBeenCalledTimes(4);
+    expect(dbMocks.updateJobForUser).toHaveBeenLastCalledWith(personalUser.id, 10, expect.objectContaining({
+      tailoredResume: completeResume,
+      tailoredResumeApprovedAt: null,
+      emailDraft: completeEmail,
     }));
   });
 });

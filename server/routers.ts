@@ -3,7 +3,7 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { applicationStatuses, jobContextModes } from "../drizzle/schema";
 import * as db from "./db";
-import { buildEmailMessages, buildLimitedContextEmailMessages, buildResumeMessages, buildResumeShorteningMessages, buildRoleBasedResumeMessages } from "./lib/aiPrompts";
+import { buildEmailCompletenessMessages, buildEmailMessages, buildLimitedContextEmailMessages, buildResumeCompletenessMessages, buildResumeMessages, buildResumeShorteningMessages, buildRoleBasedResumeMessages } from "./lib/aiPrompts";
 import { fetchPublicJobPosting } from "./lib/jobPosting";
 import { parseFollowUpDate } from "./lib/jobTracker";
 import { appendEmailSignature } from "./lib/emailSignature";
@@ -14,12 +14,14 @@ import { invokeLLM, listLLMModels } from "./_core/llm";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
 import { storageGetSignedUrl, storagePut } from "./storage";
-import { portableAuthEnabled, portableGeminiApiKey } from "./portable/config";
+import { portableAuthEnabled, portableGeminiApiKey, portableGroqApiKey } from "./portable/config";
 import { portableRawResumeFilesAllowed, portableResumeTextRequired } from "./portable/filePolicy";
-import { GeminiProviderError, generateGeminiText } from "./portable/gemini";
+import { generatePortableDraftText, portableDraftProviders, type PortableDraftProvider } from "./portable/drafting";
+import { outreachDraftQualityIssue, resumeDraftQualityIssue } from "./lib/draftQuality";
 
 const statusSchema = z.enum(applicationStatuses);
 const dateInputSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+const portableDraftProviderSchema = z.enum(portableDraftProviders);
 const optionalUrl = z.union([z.string().trim().url().max(1_000), z.literal("")]);
 const contactLinksSchema = z.object({
   email: z.union([z.string().trim().email().max(320), z.literal("")]),
@@ -89,12 +91,18 @@ async function preferredModel() {
   return catalog.data.find(model => model.id.startsWith("claude-sonnet"))?.id ?? catalog.data.find(model => model.id === "gpt-5")?.id ?? catalog.data.find(model => model.id.startsWith("gpt-5"))?.id;
 }
 
-async function generateDraftText(messages: Parameters<typeof invokeLLM>[0]["messages"], maxTokens: number, model?: string) {
+async function generateDraftText(messages: Parameters<typeof invokeLLM>[0]["messages"], maxTokens: number, model?: string, provider?: PortableDraftProvider) {
   if (portableAuthEnabled()) {
     try {
-      return await generateGeminiText({ apiKey: portableGeminiApiKey(), messages, maxOutputTokens: maxTokens });
+      return await generatePortableDraftText({
+        geminiApiKey: portableGeminiApiKey(),
+        groqApiKey: portableGroqApiKey(),
+        provider,
+        messages,
+        maxOutputTokens: maxTokens,
+      });
     } catch (error) {
-      const message = error instanceof GeminiProviderError || error instanceof Error
+      const message = error instanceof Error
         ? error.message
         : "Gemini could not create a draft. Please try again.";
       throw new TRPCError({ code: "PRECONDITION_FAILED", message });
@@ -103,14 +111,45 @@ async function generateDraftText(messages: Parameters<typeof invokeLLM>[0]["mess
   return contentFrom(await invokeLLM({ model, messages, maxTokens }));
 }
 
-async function generateOnePageResume(model: string | undefined, profile: { resumeText: string | null; personalBio: string | null; resumeFileUrl?: string }, job: { company: string; role: string; jobDescription: string; contextMode: "full" | "limited" }) {
+async function generateOnePageResume(model: string | undefined, profile: { resumeText: string | null; personalBio: string | null; resumeFileUrl?: string }, job: { company: string; role: string; jobDescription: string; contextMode: "full" | "limited" }, provider?: PortableDraftProvider) {
   const resumeMessages = job.contextMode === "limited" ? buildRoleBasedResumeMessages(profile, job) : buildResumeMessages(profile, job);
-  let draft = await generateDraftText(resumeMessages, 2600, model);
+  let draft = await generateDraftText(resumeMessages, 2600, model, provider);
   for (let attempt = 0; attempt < 2 && !resumeFitsOnePage(draft); attempt += 1) {
-    draft = await generateDraftText(buildResumeShorteningMessages(profile, job, draft), 1800, model);
+    draft = await generateDraftText(buildResumeShorteningMessages(profile, job, draft), 1800, model, provider);
   }
   if (!resumeFitsOnePage(draft)) {
     throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "The resume draft could not be condensed to the fixed one-page format. Please try generating it again." });
+  }
+  const incompleteReason = resumeDraftQualityIssue(draft, profile.resumeText);
+  if (incompleteReason) {
+    draft = await generateDraftText(buildResumeCompletenessMessages(profile, job, draft), 2600, model, provider);
+    for (let attempt = 0; attempt < 2 && !resumeFitsOnePage(draft); attempt += 1) {
+      draft = await generateDraftText(buildResumeShorteningMessages(profile, job, draft), 1800, model, provider);
+    }
+    const remainingIssue = resumeDraftQualityIssue(draft, profile.resumeText);
+    if (!resumeFitsOnePage(draft) || remainingIssue) {
+      throw new TRPCError({ code: "PRECONDITION_FAILED", message: `The drafting service returned an incomplete resume and it was not saved: ${remainingIssue ?? "it could not fit one page"}. Please try again.` });
+    }
+  }
+  return draft;
+}
+
+async function generateOutreachEmail(
+  messages: Parameters<typeof generateDraftText>[0],
+  model: string | undefined,
+  profile: { resumeText: string | null; personalBio: string | null; resumeFileUrl?: string },
+  job: { company: string; role: string; jobDescription: string; contextMode: "full" | "limited" },
+  maxTokens: number,
+  provider?: PortableDraftProvider,
+) {
+  let draft = await generateDraftText(messages, maxTokens, model, provider);
+  let issue = outreachDraftQualityIssue(draft, profile.resumeText, profile.personalBio, job);
+  if (issue) {
+    draft = await generateDraftText(buildEmailCompletenessMessages(profile, job, draft), maxTokens, model, provider);
+    issue = outreachDraftQualityIssue(draft, profile.resumeText, profile.personalBio, job);
+  }
+  if (issue) {
+    throw new TRPCError({ code: "PRECONDITION_FAILED", message: `The drafting service returned an incomplete outreach email and it was not saved: ${issue}. Please try again.` });
   }
   return draft;
 }
@@ -125,6 +164,15 @@ export const appRouter = router({
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
       return { success: true } as const;
     }),
+  }),
+  drafting: router({
+    providers: portableOwnerProcedure.query(() => ({
+      portableMode: portableAuthEnabled(),
+      providers: [
+        { id: "gemini" as const, label: "Gemini", configured: Boolean(process.env.GEMINI_API_KEY?.trim()), environmentKey: "GEMINI_API_KEY" },
+        { id: "groq" as const, label: "Groq", configured: Boolean(process.env.GROQ_API_KEY?.trim()), environmentKey: "GROQ_API_KEY" },
+      ],
+    })),
   }),
   profile: router({
     get: portableOwnerProcedure.query(async ({ ctx }) => {
@@ -227,7 +275,7 @@ export const appRouter = router({
         return db.updateJobForUser(user.id, job.id, { tailoredResumeApprovedAt: input.approved ? new Date() : null });
       }),
     generateDrafts: portableOwnerProcedure
-      .input(z.object({ id: z.number().int().positive() }))
+      .input(z.object({ id: z.number().int().positive(), provider: portableDraftProviderSchema.default("gemini") }))
       .mutation(async ({ input, ctx }) => {
         const user = await personalUser(ctx.user);
         const [profile, job] = await Promise.all([db.getMasterProfile(user.id), db.getJobForUser(user.id, input.id)]);
@@ -243,10 +291,11 @@ export const appRouter = router({
         // not query the managed-platform model catalogue, which requires the
         // legacy Forge/OpenAI-style credential unavailable on Vercel.
         const model = portableAuthEnabled() ? undefined : await preferredModel();
+        const provider = portableAuthEnabled() ? input.provider : undefined;
         if (job.contextMode === "limited") {
           const [roleBasedResume, emailResult] = await Promise.all([
-            generateOnePageResume(model, profileContext, job),
-            generateDraftText(buildLimitedContextEmailMessages(profileContext, job), 1400, model),
+            generateOnePageResume(model, profileContext, job, provider),
+            generateOutreachEmail(buildLimitedContextEmailMessages(profileContext, job), model, profileContext, job, 1400, provider),
           ]);
           return db.updateJobForUser(user.id, job.id, {
             tailoredResume: roleBasedResume,
@@ -255,8 +304,8 @@ export const appRouter = router({
           });
         }
         const [tailoredResume, emailResult] = await Promise.all([
-          generateOnePageResume(model, profileContext, job),
-          generateDraftText(buildEmailMessages(profileContext, job), 1600, model),
+          generateOnePageResume(model, profileContext, job, provider),
+          generateOutreachEmail(buildEmailMessages(profileContext, job), model, profileContext, job, 1600, provider),
         ]);
         return db.updateJobForUser(user.id, job.id, { tailoredResume, tailoredResumeApprovedAt: null, emailDraft: appendEmailSignature(cleanEmailDraft(emailResult), profile.emailSignature) });
       }),
