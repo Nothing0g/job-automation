@@ -6,8 +6,11 @@
     { "source": "/(.*)", "destination": "/api" }
   ],
   "functions": {
-    "api/index.ts": {
-      "includeFiles": "dist/public/**"
+    "api/index.cjs": {
+      "includeFiles": [
+        "dist/public/**",
+        "dist/vercel-handler.cjs"
+      ]
     }
   }
 }

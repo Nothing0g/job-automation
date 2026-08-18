@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Express } from "express";
-import { createApiApp } from "../server/_core/app";
-import { serveStatic } from "../server/_core/vite";
+import { createApiApp } from "../_core/app";
+import { serveStatic } from "../_core/static";
 
 let application: Express | undefined;
 let initialization: Promise<Express> | undefined;

@@ -1,4 +1,4 @@
-import express, { type Express } from "express";
+import { type Express } from "express";
 import fs from "fs";
 import { type Server } from "http";
 import { nanoid } from "nanoid";
@@ -44,24 +44,5 @@ export async function setupVite(app: Express, server: Server) {
       vite.ssrFixStacktrace(e as Error);
       next(e);
     }
-  });
-}
-
-export function serveStatic(app: Express) {
-  const configuredPath = process.env.STATIC_DIR;
-  const projectBuildPath = path.resolve(process.cwd(), "dist", "public");
-  const packagedBuildPath = path.resolve(import.meta.dirname, "public");
-  const distPath = configuredPath ?? (fs.existsSync(projectBuildPath) ? projectBuildPath : packagedBuildPath);
-  if (!fs.existsSync(distPath)) {
-    console.error(
-      `Could not find the build directory: ${distPath}, make sure to build the client first`
-    );
-  }
-
-  app.use(express.static(distPath));
-
-  // fall through to index.html if the file doesn't exist
-  app.use("*", (_req, res) => {
-    res.sendFile(path.resolve(distPath, "index.html"));
   });
 }
