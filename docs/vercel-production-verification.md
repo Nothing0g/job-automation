@@ -34,5 +34,11 @@ Vercel then reported that `.cjs` is not recognized as a source function extensio
 
 The generated CommonJS bundle exposes its handler under `default`, while ESM imports expose the complete CommonJS export object. The JavaScript wrapper now explicitly selects `bundledHandler.default` when present, ensuring Vercel receives an invokable request handler rather than the export object.
 
+### Portable bootstrap dependency isolation
+
+The Vercel build emitted `[OAuth] ERROR: OAUTH_SERVER_URL is not configured` while importing the serverless handler bundle. That variable belongs to the managed platform OAuth flow and is intentionally absent from the portable Vercel environment. Portable mode now avoids loading the managed OAuth routes and SDK authentication path entirely; it uses only the configured owner-only Google authentication flow. Application creation is asynchronous so this conditional module loading works in both the local Express server and the Vercel handler. A focused regression test verifies the managed OAuth callback is not registered in portable mode.
+
+The isolated bootstrap passed 87 tests, the TypeScript check, and the Vercel-targeted build. The build no longer emits the missing `OAUTH_SERVER_URL` warning, confirming that the managed OAuth SDK is absent from the portable serverless startup path.
+
 [1]: https://vercel.com/kb/guide/how-can-i-use-files-in-serverless-functions
 [2]: https://vercel.com/kb/guide/how-do-i-resolve-a-module-not-found-error

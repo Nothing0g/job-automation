@@ -3,7 +3,6 @@ import type { User } from "../../drizzle/schema";
 import { getOrCreatePortableOwner } from "../db";
 import { portableAuthEnabled, portableOAuthConfig } from "../portable/config";
 import { verifyOwnerSession } from "../portable/ownerSession";
-import { sdk } from "./sdk";
 
 export type TrpcContext = {
   req: CreateExpressContextOptions["req"];
@@ -15,15 +14,19 @@ export async function createContext(
   opts: CreateExpressContextOptions
 ): Promise<TrpcContext> {
   let user: User | null = null;
+  const portableMode = portableAuthEnabled();
 
-  try {
-    user = await sdk.authenticateRequest(opts.req);
-  } catch (error) {
-    // Authentication is optional for public procedures.
-    user = null;
+  if (!portableMode) {
+    try {
+      const { sdk } = await import("./sdk");
+      user = await sdk.authenticateRequest(opts.req);
+    } catch {
+      // Authentication is optional for public procedures.
+      user = null;
+    }
   }
 
-  if (!user && portableAuthEnabled()) {
+  if (!user && portableMode) {
     try {
       const config = portableOAuthConfig();
       const token = (opts.req.headers.cookie ?? "").split(";").map(value => value.trim()).find(value => value.startsWith("job_automation_owner="))?.slice("job_automation_owner=".length) ?? "";

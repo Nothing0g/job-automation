@@ -18,8 +18,8 @@ export async function initializeApiApp(): Promise<Express> {
 
   if (!initialization) {
     initialization = Promise.resolve()
-      .then(() => {
-        const app = createApiApp();
+      .then(async () => {
+        const app = await createApiApp();
 
         // Static delivery remains after API/OAuth routes so callback endpoints
         // cannot be swallowed by the SPA fallback.

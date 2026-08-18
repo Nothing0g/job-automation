@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 const mockApp = vi.fn();
-const createApiApp = vi.fn(() => mockApp);
+const createApiApp = vi.fn(async () => mockApp);
 const serveStatic = vi.fn();
 
 vi.mock("../_core/app", () => ({ createApiApp }));
