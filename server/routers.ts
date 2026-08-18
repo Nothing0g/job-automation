@@ -14,7 +14,9 @@ import { invokeLLM, listLLMModels } from "./_core/llm";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
 import { storageGetSignedUrl, storagePut } from "./storage";
-import { portableAuthEnabled } from "./portable/config";
+import { portableAuthEnabled, portableGeminiApiKey } from "./portable/config";
+import { portableRawResumeFilesAllowed, portableResumeTextRequired } from "./portable/filePolicy";
+import { GeminiProviderError, generateGeminiText } from "./portable/gemini";
 
 const statusSchema = z.enum(applicationStatuses);
 const dateInputSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
@@ -87,11 +89,25 @@ async function preferredModel() {
   return catalog.data.find(model => model.id.startsWith("claude-sonnet"))?.id ?? catalog.data.find(model => model.id === "gpt-5")?.id ?? catalog.data.find(model => model.id.startsWith("gpt-5"))?.id;
 }
 
+async function generateDraftText(messages: Parameters<typeof invokeLLM>[0]["messages"], maxTokens: number, model?: string) {
+  if (portableAuthEnabled()) {
+    try {
+      return await generateGeminiText({ apiKey: portableGeminiApiKey(), messages, maxOutputTokens: maxTokens });
+    } catch (error) {
+      const message = error instanceof GeminiProviderError || error instanceof Error
+        ? error.message
+        : "Gemini could not create a draft. Please try again.";
+      throw new TRPCError({ code: "PRECONDITION_FAILED", message });
+    }
+  }
+  return contentFrom(await invokeLLM({ model, messages, maxTokens }));
+}
+
 async function generateOnePageResume(model: string | undefined, profile: { resumeText: string | null; personalBio: string | null; resumeFileUrl?: string }, job: { company: string; role: string; jobDescription: string; contextMode: "full" | "limited" }) {
   const resumeMessages = job.contextMode === "limited" ? buildRoleBasedResumeMessages(profile, job) : buildResumeMessages(profile, job);
-  let draft = contentFrom(await invokeLLM({ model, messages: resumeMessages, maxTokens: 2600 }));
+  let draft = await generateDraftText(resumeMessages, 2600, model);
   for (let attempt = 0; attempt < 2 && !resumeFitsOnePage(draft); attempt += 1) {
-    draft = contentFrom(await invokeLLM({ model, messages: buildResumeShorteningMessages(profile, job, draft), maxTokens: 1800 }));
+    draft = await generateDraftText(buildResumeShorteningMessages(profile, job, draft), 1800, model);
   }
   if (!resumeFitsOnePage(draft)) {
     throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "The resume draft could not be condensed to the fixed one-page format. Please try generating it again." });
@@ -128,6 +144,9 @@ export const appRouter = router({
       .input(z.object({ filename: z.string().min(1).max(255), mimeType: z.string(), base64: z.string().min(16).max(12_000_000) }))
       .mutation(async ({ input, ctx }) => {
         const user = await personalUser(ctx.user);
+        if (!portableRawResumeFilesAllowed()) {
+          throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Portable mode does not store original resume files. Keep the original in your own backup location and paste its factual text into Master Profile." });
+        }
         if (input.mimeType !== "application/pdf" && !input.filename.toLowerCase().endsWith(".pdf")) {
           throw new TRPCError({ code: "BAD_REQUEST", message: "Upload a PDF resume or paste the resume as text." });
         }
@@ -213,28 +232,30 @@ export const appRouter = router({
         const user = await personalUser(ctx.user);
         const [profile, job] = await Promise.all([db.getMasterProfile(user.id), db.getJobForUser(user.id, input.id)]);
         if (!job) throw new TRPCError({ code: "NOT_FOUND", message: "This job no longer exists." });
-        if (!profile || (!profile.resumeText?.trim() && !profile.resumeFileKey)) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: "Save a master resume before generating a tailored resume or outreach email." });
+        if (!profile || (portableResumeTextRequired() ? !profile.resumeText?.trim() : (!profile.resumeText?.trim() && !profile.resumeFileKey))) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: portableResumeTextRequired()
+            ? "Portable mode needs pasted master-resume text before it can generate a tailored resume or outreach email."
+            : "Save a master resume before generating a tailored resume or outreach email." });
         }
-        const resumeFileUrl = profile.resumeFileKey ? await storageGetSignedUrl(profile.resumeFileKey) : undefined;
+        const resumeFileUrl = !portableResumeTextRequired() && profile.resumeFileKey ? await storageGetSignedUrl(profile.resumeFileKey) : undefined;
         const profileContext = { resumeText: profile.resumeText, personalBio: profile.personalBio, resumeFileUrl };
         const model = await preferredModel();
         if (job.contextMode === "limited") {
           const [roleBasedResume, emailResult] = await Promise.all([
             generateOnePageResume(model, profileContext, job),
-            invokeLLM({ model, messages: buildLimitedContextEmailMessages(profileContext, job), maxTokens: 1400 }),
+            generateDraftText(buildLimitedContextEmailMessages(profileContext, job), 1400, model),
           ]);
           return db.updateJobForUser(user.id, job.id, {
             tailoredResume: roleBasedResume,
             tailoredResumeApprovedAt: null,
-            emailDraft: appendEmailSignature(cleanEmailDraft(contentFrom(emailResult)), profile.emailSignature),
+            emailDraft: appendEmailSignature(cleanEmailDraft(emailResult), profile.emailSignature),
           });
         }
         const [tailoredResume, emailResult] = await Promise.all([
           generateOnePageResume(model, profileContext, job),
-          invokeLLM({ model, messages: buildEmailMessages(profileContext, job), maxTokens: 1600 }),
+          generateDraftText(buildEmailMessages(profileContext, job), 1600, model),
         ]);
-        return db.updateJobForUser(user.id, job.id, { tailoredResume, tailoredResumeApprovedAt: null, emailDraft: appendEmailSignature(cleanEmailDraft(contentFrom(emailResult)), profile.emailSignature) });
+        return db.updateJobForUser(user.id, job.id, { tailoredResume, tailoredResumeApprovedAt: null, emailDraft: appendEmailSignature(cleanEmailDraft(emailResult), profile.emailSignature) });
       }),
   }),
 });
