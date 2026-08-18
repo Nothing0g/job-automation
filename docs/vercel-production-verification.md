@@ -52,5 +52,9 @@ The Gmail callback then exposed a malformed `GMAIL_TOKEN_ENCRYPTION_KEY` environ
 
 The post-key-rotation redeployment is Vercel production deployment `dpl_3TrNowpKzPLhLX5usYH8yHbt6YGT`, created as a redeploy of the private `main` branch and reported `READY` by Vercel. The stable production domain remains `https://job-automation-omega.vercel.app`.
 
+### Gemini model retirement repair
+
+Live role-based drafting initially failed after the portable provider-routing repair because Google retired `models/gemini-2.5-flash` for new users. Google’s API response named `models/gemini-3.6-flash` as the replacement, and its current official model guide identifies that Flash model as a stable endpoint. The server-only provider URL and its focused regression test were updated to use `gemini-3.6-flash` and reject regression to the retired identifier. The repair passed 88 Vitest tests, the TypeScript check, and the production Vercel bundle build. The existing `GEMINI_API_KEY` remains server-side only; no browser key or new environment variable is required.
+
 [1]: https://vercel.com/kb/guide/how-can-i-use-files-in-serverless-functions
 [2]: https://vercel.com/kb/guide/how-do-i-resolve-a-module-not-found-error

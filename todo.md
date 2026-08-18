@@ -163,3 +163,5 @@
 - [ ] Add the allowlisted owner Google account as an OAuth test user for the unverified Gmail Compose scope, then validate Gmail connection and a manual-only approved-resume draft.
 - [x] Replace the malformed production Gmail token-encryption key with a securely generated Base64-encoded 32-byte key, redeploy, and restart Gmail authorization from a new connection request.
 - [x] Diagnose and repair the production role-based resume generation path that still requests `OPENAI_API_KEY` instead of the configured server-only Gemini provider, then validate a grounded draft can be approved for Gmail attachment.
+- [ ] Replace the retired `models/gemini-2.5-flash` production API model with a currently available Gemini model, add regression coverage, and validate the live role-based generation flow.
+- [x] Compare Claude API access against the current Gemini replacement for the user’s no-card, personal-use constraints before any provider migration is approved.

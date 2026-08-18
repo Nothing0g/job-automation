@@ -14,7 +14,8 @@ describe("portable Gemini provider", () => {
 
     await expect(generateGeminiText({ apiKey: "server-only-key", messages, maxOutputTokens: 900, fetchImpl })).resolves.toBe("Grounded draft");
     const [url, init] = fetchImpl.mock.calls[0];
-    expect(url).toContain("gemini-2.5-flash:generateContent");
+    expect(url).toContain("gemini-3.6-flash:generateContent");
+    expect(url).not.toContain("gemini-2.5-flash");
     expect(init.headers["x-goog-api-key"]).toBe("server-only-key");
     expect(init.body).toContain("Use only supplied facts.");
     expect(init.body).not.toContain("server-only-key");
