@@ -151,3 +151,5 @@
 - [x] Select a user-approved portable AI approach before enabling hosted resume tailoring and personalized email generation outside the managed environment.
 - [x] Make raw resume-file upload and download behavior explicit for no-R2 portable mode so those controls cannot fail after deployment.
 - [x] Integrate a user-owned server-side Gemini API provider for strictly grounded resume tailoring and personalized email drafting in portable mode.
+- [x] Diagnose and correct the Vercel `drizzle-kit migrate` build failure before retrying the private TiDB-backed deployment.
+- [x] Configure Drizzle Kit’s TiDB migration connection with explicit, certificate-verifying TLS credentials and review the runtime database connector for the same requirement.
