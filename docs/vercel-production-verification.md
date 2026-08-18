@@ -30,5 +30,9 @@ The first CommonJS bundle surfaced one further packaging constraint: its static 
 
 The first wrapper deployment was rejected by Vercel’s configuration validator before it ran the build because this project’s configuration schema accepts one `includeFiles` string rather than an array. The function now uses the required `dist/**` string glob, which packages both the generated handler bundle and the compiled client assets.
 
+Vercel then reported that `.cjs` is not recognized as a source function extension in the `api` directory. The tracked source entry is therefore `api/index.js`, which Vercel recognizes as a serverless function. Because the package uses ESM, it imports the generated CommonJS handler as its default export; the handler itself remains self-contained and free of Vite development imports.
+
+The generated CommonJS bundle exposes its handler under `default`, while ESM imports expose the complete CommonJS export object. The JavaScript wrapper now explicitly selects `bundledHandler.default` when present, ensuring Vercel receives an invokable request handler rather than the export object.
+
 [1]: https://vercel.com/kb/guide/how-can-i-use-files-in-serverless-functions
 [2]: https://vercel.com/kb/guide/how-do-i-resolve-a-module-not-found-error
