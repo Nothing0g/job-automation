@@ -10,6 +10,10 @@ The unsigned browser request to `GET /api/portable/auth/status` returned Vercel 
 
 The portable route parser decoded every cookie in the incoming header with `decodeURIComponent`. A malformed percent-encoded value in any unrelated browser or platform cookie could throw before the unsigned status response was returned. The parser now preserves malformed values verbatim and allows normal owner-session verification to treat an invalid token as unsigned. The repair is covered by three focused tests and passed the full suite (85 tests), TypeScript check, and Vercel-targeted build locally.
 
+### Verified production recovery
+
+The stable production endpoint is healthy at `https://job-automation-omega.vercel.app/api/portable/auth/status`. Direct Vercel diagnostics returned HTTP `200` with `{"enabled":true,"signedIn":false,"gmailConnected":false}` on 18 August 2026. The response confirms that portable authentication is enabled, no owner session is present in the diagnostic context, Gmail is not yet connected, and the serverless runtime no longer crashes. The next prerequisite is to set the stable URL in `PORTABLE_APP_BASE_URL` and register the two Google OAuth redirect URIs before validating the owner-only Google login and Gmail draft flow.
+
 ### Follow-up deployment check
 
 Vercel built commit `0e1f0d2f` successfully as production deployment `dpl_CGWDAZwqniCBjPLwS2nVRB5AN2Fq`. The immutable deployment URL redirects an unsigned browser to Vercel login, confirming deployment-level Vercel protection for that URL. The stable project domain still returned `FUNCTION_INVOCATION_FAILED` for the portable status route, so the next diagnosis must focus on the Vercel serverless handler/bootstrap rather than the already-corrected cookie parser.

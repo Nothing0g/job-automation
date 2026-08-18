@@ -157,4 +157,5 @@
 - [x] Inspect the connected Vercel project’s failed deployment commit and logs, then verify the corrected build from the platform directly.
 - [x] Reset or recover the TiDB password, update Vercel’s Production `DATABASE_URL` with the exact full connection string, and validate the successful database migration build.
 - [x] Prevent malformed unrelated browser cookies from crashing the portable owner-auth status endpoint, cover the regression, and validate the repaired production route locally before the production retry.
-- [ ] Diagnose and prevent the remaining Vercel API serverless bootstrap failure, with production-safe error logging and an authenticated-route validation.
+- [x] Diagnose and prevent the remaining Vercel API serverless bootstrap failure, with production-safe error logging and a production owner-auth status validation (`200`, signed out).
+- [ ] Set the production URL in Vercel and Google OAuth redirect configuration, then validate owner-only Google sign-in and Gmail OAuth draft access.
