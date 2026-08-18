@@ -16,7 +16,7 @@ The portable branch keeps the core application in TypeScript/Express/React and a
 
 ## Before deployment
 
-> Keep the current repository and the dedicated `job-automation-preserve-version` backup unchanged. Work from the `portable-migration` branch until all callback and draft checks pass.
+> Keep the current repository and the dedicated `job-automation-preserve-version` backup unchanged. Deploy the reviewed private repository `main` branch and retain the preserved repository as a recovery point.
 
 1. Create a **TiDB Cloud Serverless** cluster and database. Copy its TLS connection string.
 2. Keep any original resume file and downloaded exports in your own local files or Google Drive. In portable mode, enter the master resume content in the app; no object-storage account is required.
@@ -39,8 +39,8 @@ Verify the schema in TiDB after the first successful deployment. Do not run dest
 
 ## Vercel configuration
 
-1. Import the private GitHub repository into Vercel and select the `portable-migration` branch.
-2. Set every value from `.env.portable.example` in **Project Settings → Environment Variables** for Preview and Production. Do **not** set `BUILT_IN_FORGE_API_URL` or `BUILT_IN_FORGE_API_KEY` externally.
+1. Import the private GitHub repository into Vercel and select the `main` branch.
+2. Set every value from `.env.portable.example` in **Project Settings → Environment Variables** for Preview and Production. Set `VITE_PORTABLE_AUTH_ENABLED=true` too; it contains no secret and hides raw resume-file upload in this no-R2 deployment. Do **not** set `BUILT_IN_FORGE_API_URL` or `BUILT_IN_FORGE_API_KEY` externally.
 3. Deploy the preview build. `vercel.json` routes the request to the portable Express API and `api/index.ts` serves the built React application.
 4. Copy the actual preview/production URL into `PORTABLE_APP_BASE_URL`, add its two Google callback URLs, then redeploy. OAuth redirects must exactly match the final public URL.
 5. Set `PORTABLE_AUTH_ENABLED=true` only after all required values are present. With it enabled, personal profile, job, drafting, and import routes require the verified allowlisted owner session.
@@ -54,9 +54,9 @@ Verify the schema in TiDB after the first successful deployment. Do not run dest
 5. Press **Draft with resume**. The server creates a Gmail **draft** with the approved DOCX attached. Inspect the Gmail Drafts folder. Do not press Send during validation.
 6. Confirm drafts without one of the four prerequisites are blocked. There is deliberately no API route that sends mail.
 
-## Database-only document handling and optional AI drafting
+## Database-only document handling and Gemini drafting
 
-The portable deployment stores application records, master-profile text, and reviewed resume text in TiDB. It does not persist original resume PDFs/DOCX files or exported files in an external object bucket. The attachment feature does not call any AI service: it generates the DOCX from the reviewed resume text stored in the database. The current AI drafting feature remains a separate provider boundary: it may remain enabled in the managed environment or be replaced later with a user-selected AI provider. Do not place any server key in client-side `VITE_` variables.
+The portable deployment stores application records, master-profile text, and reviewed resume text in TiDB. It does not persist original resume PDFs/DOCX files or exported files in an external object bucket. The attachment feature does not call any AI service: it generates the DOCX from the reviewed resume text stored in the database. Tailored resume and email drafting use the owner-approved server-only `GEMINI_API_KEY`. Do not place this key in client-side `VITE_` variables, commit it to GitHub, or share it in chat. The owner selected Gemini's Free Tier and accepts its applicable unpaid-service data-use terms.
 
 ## Recovery and rollback
 
