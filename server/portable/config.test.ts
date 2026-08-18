@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { portableAuthEnabled, portableOAuthConfig, portableRedirect } from "./config";
+import { portableAuthEnabled, portableGeminiApiKey, portableOAuthConfig, portableRedirect } from "./config";
 import { decryptPortableSecret, encryptPortableSecret } from "./encryption";
 
 const env = {
@@ -11,6 +11,7 @@ const env = {
   OWNER_GOOGLE_EMAIL: "OWNER@example.com",
   OWNER_SESSION_SECRET: "session-secret-that-is-longer-than-thirty-two-characters",
   GMAIL_TOKEN_ENCRYPTION_KEY: randomBytes(32).toString("base64"),
+  GEMINI_API_KEY: "server-only-gemini-key",
 };
 
 describe("portable runtime configuration", () => {
@@ -27,5 +28,10 @@ describe("portable runtime configuration", () => {
     expect(encrypted).not.toContain("refresh-token");
     expect(decryptPortableSecret(encrypted, env.GMAIL_TOKEN_ENCRYPTION_KEY)).toBe("refresh-token");
     expect(() => decryptPortableSecret(encrypted, randomBytes(32).toString("base64"))).toThrow();
+  });
+
+  it("requires a Gemini key only when portable drafting is invoked", () => {
+    expect(portableGeminiApiKey(env)).toBe("server-only-gemini-key");
+    expect(() => portableGeminiApiKey({})).toThrow("GEMINI_API_KEY");
   });
 });

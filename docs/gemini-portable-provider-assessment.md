@@ -6,6 +6,8 @@ Google documents that a Gemini API key must remain server-side, should be read f
 
 Gemini supports schema-constrained JSON responses, which is compatible with the current structured tailored-resume and email-draft workflow.[2]
 
+Google’s current text-generation guidance recommends the Interactions API, which accepts server-side `x-goog-api-key` authentication, a `system_instruction`, and text input. The established `models.generateContent` REST endpoint remains available. For this focused text-only workflow, the stable `gemini-2.5-flash` model is documented as supporting text output, structured outputs, and a 1,048,576-token input limit.[5] [6] [7]
+
 Google’s Free Tier does **not** meet the project’s stated privacy-first objective for resume and job-description content. Google states that it may use unpaid-service prompts and responses to provide, improve, and develop products, and that human reviewers may process inputs and outputs. Google explicitly instructs users not to submit sensitive, confidential, or personal information to unpaid services.[3]
 
 Google states that Paid Services do not use prompts or responses to improve products, although it logs them for a limited time for safety and abuse prevention. Moving from the Free Tier to paid access requires an active billing account and, under the current prepay setup, a minimum $10 credit purchase.[3] [4]
@@ -23,3 +25,9 @@ The project should not send the owner’s resume, contact information, job descr
 [3] Google AI for Developers, [Gemini API Additional Terms of Service](https://ai.google.dev/gemini-api/terms).
 
 [4] Google AI for Developers, [Billing](https://ai.google.dev/gemini-api/docs/billing).
+
+[5] Google AI for Developers, [Text generation](https://ai.google.dev/gemini-api/docs/text-generation).
+
+[6] Google AI for Developers, [Generate content API reference](https://ai.google.dev/api/generate-content).
+
+[7] Google AI for Developers, [Gemini 2.5 Flash](https://ai.google.dev/gemini-api/docs/models/gemini-2.5-flash).

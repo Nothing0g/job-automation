@@ -17,6 +17,12 @@ export function portableAuthEnabled(env: NodeJS.ProcessEnv = process.env) {
   return env.PORTABLE_AUTH_ENABLED === "true";
 }
 
+export function portableGeminiApiKey(env: NodeJS.ProcessEnv = process.env) {
+  const value = env.GEMINI_API_KEY?.trim();
+  if (!value) throw new Error("GEMINI_API_KEY is required when portable resume and email drafting is enabled.");
+  return value;
+}
+
 export function portableOAuthConfig(env: NodeJS.ProcessEnv = process.env): PortableOAuthConfig {
   const baseUrl = required(env, "PORTABLE_APP_BASE_URL").replace(/\/$/, "");
   if (!/^https?:\/\//.test(baseUrl)) throw new Error("PORTABLE_APP_BASE_URL must begin with http:// or https://.");
