@@ -1,3 +1,3 @@
-import bundledHandler from "../dist/vercel-handler.cjs";
+import handler from "../dist/vercel-handler.mjs";
 
-export default bundledHandler.default ?? bundledHandler;
+export default handler;

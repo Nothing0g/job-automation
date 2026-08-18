@@ -24,15 +24,13 @@ The controlled request identified the concrete packaging issue: Vercel's ESM out
 
 The current ready deployment still fails before the handler starts. Vercel’s official guidance confirms that functions use static import analysis to trace runtime files and that dynamic loads need `includeFiles` coverage; it also advises inspecting the compiled module resolution path for module-not-found failures.[1][2] The runtime error references an extensionless ESM import from `/var/task/api/index.js` to `/var/task/server/_core/app`, so the next repair must preserve statically traceable imports while ensuring the function receives a Node-resolvable bundled artifact rather than relying on Vercel to resolve the TypeScript project’s extensionless internal module graph.
 
-The revised arrangement keeps a tracked `api/index.cjs` wrapper and has the normal build generate `dist/vercel-handler.cjs` from the TypeScript serverless handler. The wrapper uses standard CommonJS resolution, while the bundled handler eliminates the internal TypeScript ESM import chain. Vercel is explicitly instructed to package both the handler bundle and `dist/public` static site output.
+The revised arrangement uses a tracked `api/index.js` wrapper and has the normal build generate a self-contained handler bundle from the TypeScript serverless handler. Vercel is explicitly instructed to package both the handler bundle and `dist/public` static site output.
 
-The first CommonJS bundle surfaced one further packaging constraint: its static import of the combined Vite/static helper still embedded the Vite configuration, whose `import.meta.dirname` expressions cannot execute in CommonJS. Production static delivery is now isolated in a Vite-free module, leaving development-only Vite imports out of the Vercel handler bundle.
+The initial CommonJS bundle surfaced two constraints: its static import of the combined Vite/static helper embedded development-only Vite configuration, and it attempted to `require()` the ESM-only `jose` JWT package. Production static delivery remains isolated in a Vite-free module, and the emitted Vercel handler is now ESM (`dist/vercel-handler.mjs`) so `jose` loads natively without an unsupported CommonJS conversion.
 
 The first wrapper deployment was rejected by Vercel’s configuration validator before it ran the build because this project’s configuration schema accepts one `includeFiles` string rather than an array. The function now uses the required `dist/**` string glob, which packages both the generated handler bundle and the compiled client assets.
 
-Vercel then reported that `.cjs` is not recognized as a source function extension in the `api` directory. The tracked source entry is therefore `api/index.js`, which Vercel recognizes as a serverless function. Because the package uses ESM, it imports the generated CommonJS handler as its default export; the handler itself remains self-contained and free of Vite development imports.
-
-The generated CommonJS bundle exposes its handler under `default`, while ESM imports expose the complete CommonJS export object. The JavaScript wrapper now explicitly selects `bundledHandler.default` when present, ensuring Vercel receives an invokable request handler rather than the export object.
+Vercel does not recognize `.cjs` as a source function extension in the `api` directory, so the tracked source entry remains `api/index.js`. Because the package and generated handler now use ESM, the wrapper directly default-imports `dist/vercel-handler.mjs`, ensuring Vercel receives an invokable handler while preserving native ESM resolution.
 
 ### Portable bootstrap dependency isolation
 
