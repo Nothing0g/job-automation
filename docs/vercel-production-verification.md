@@ -28,5 +28,7 @@ The revised arrangement keeps a tracked `api/index.cjs` wrapper and has the norm
 
 The first CommonJS bundle surfaced one further packaging constraint: its static import of the combined Vite/static helper still embedded the Vite configuration, whose `import.meta.dirname` expressions cannot execute in CommonJS. Production static delivery is now isolated in a Vite-free module, leaving development-only Vite imports out of the Vercel handler bundle.
 
+The first wrapper deployment was rejected by Vercel’s configuration validator before it ran the build because this project’s configuration schema accepts one `includeFiles` string rather than an array. The function now uses the required `dist/**` string glob, which packages both the generated handler bundle and the compiled client assets.
+
 [1]: https://vercel.com/kb/guide/how-can-i-use-files-in-serverless-functions
 [2]: https://vercel.com/kb/guide/how-do-i-resolve-a-module-not-found-error

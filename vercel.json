@@ -7,10 +7,7 @@
   ],
   "functions": {
     "api/index.cjs": {
-      "includeFiles": [
-        "dist/public/**",
-        "dist/vercel-handler.cjs"
-      ]
+      "includeFiles": "dist/**"
     }
   }
 }
