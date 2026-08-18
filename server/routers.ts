@@ -239,7 +239,10 @@ export const appRouter = router({
         }
         const resumeFileUrl = !portableResumeTextRequired() && profile.resumeFileKey ? await storageGetSignedUrl(profile.resumeFileKey) : undefined;
         const profileContext = { resumeText: profile.resumeText, personalBio: profile.personalBio, resumeFileUrl };
-        const model = await preferredModel();
+        // The portable Gemini provider has a fixed server-side model and must
+        // not query the managed-platform model catalogue, which requires the
+        // legacy Forge/OpenAI-style credential unavailable on Vercel.
+        const model = portableAuthEnabled() ? undefined : await preferredModel();
         if (job.contextMode === "limited") {
           const [roleBasedResume, emailResult] = await Promise.all([
             generateOnePageResume(model, profileContext, job),
