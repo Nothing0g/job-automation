@@ -42,5 +42,15 @@ The Vercel build emitted `[OAuth] ERROR: OAUTH_SERVER_URL is not configured` whi
 
 The isolated bootstrap passed 87 tests, the TypeScript check, and the Vercel-targeted build. The build no longer emits the missing `OAUTH_SERVER_URL` warning, confirming that the managed OAuth SDK is absent from the portable serverless startup path.
 
+### Live Google owner sign-in and Gmail authorization recovery
+
+After a Vercel production redeployment, the stable public owner-auth endpoint returned a fresh Google authorization redirect using the replacement Web application client ID. The initial authorization request confirmed the stable callback URL was emitted correctly. Google then rejected that replacement client with `redirect_uri_mismatch` until both production callbacks were registered on that exact client: `/api/portable/auth/google/callback` and `/api/portable/gmail/callback`.
+
+The production owner sign-in completed successfully after that correction: the allowlisted Google account returned to the populated Job Automation Studio dashboard. The follow-up Gmail Compose authorization was initially denied because the OAuth app remained in Google Testing status and the owner account was not a listed test user. Adding the owner account under Google Auth Platform → Audience → Test users resolved that policy gate without making the personal application public or submitting it for public verification.
+
+The Gmail callback then exposed a malformed `GMAIL_TOKEN_ENCRYPTION_KEY` environment value. The value was replaced with a securely generated Base64-encoded 32-byte AES-256-GCM key and the app was redeployed. A new Gmail authorization flow returned to `/?gmail=connected`, which is the route’s success redirect after the encrypted Gmail refresh token has been stored. This confirms Gmail draft authorization is connected. The remaining live functional check requires a real saved application with a recipient email and an approved tailored resume; only then can the manual-only Gmail draft action create an attached DOCX draft.
+
+The post-key-rotation redeployment is Vercel production deployment `dpl_3TrNowpKzPLhLX5usYH8yHbt6YGT`, created as a redeploy of the private `main` branch and reported `READY` by Vercel. The stable production domain remains `https://job-automation-omega.vercel.app`.
+
 [1]: https://vercel.com/kb/guide/how-can-i-use-files-in-serverless-functions
 [2]: https://vercel.com/kb/guide/how-do-i-resolve-a-module-not-found-error
