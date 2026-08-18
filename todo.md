@@ -128,6 +128,7 @@
 - [x] Add an explicit, user-triggered one-page role-based resume option for No JD applications that uses the role title to prioritize, reorder, and carefully rephrase only supported master-profile facts; label it accurately as role-based rather than JD-tailored.
 - [x] Add regression coverage and visual validation for the No JD role-based resume option, its approval gate, and its no-fabrication boundary.
 - [x] Add focused server coverage that a No JD role-based resume still needs a generated reviewable draft before it can be approved for export.
+- [x] Create comprehensive reconstruction documentation covering architecture, API contracts, data flows, setup, schema, external services, and technical decisions.
 - [x] Compare Google-account allowlist authentication with a passkey-only WebAuthn gate for a portable private deployment, including device-loss recovery.
 - [x] Define a portable hosting, database, storage, and Gmail OAuth draft-attachment migration plan that does not depend on Manus-specific services.
 - [x] Create a dedicated portable-migration branch from the preserved current version and map every remaining platform-specific runtime dependency.
@@ -170,3 +171,4 @@
 - [x] Add Groq as a server-only fallback to Gemini while preserving the existing factual grounding, retry, and incomplete-draft rejection safeguards.
 - [x] Add an owner-only in-app AI provider selector for configured Gemini and Groq providers, show configuration status without exposing keys, and document Vercel-only secret setup.
 - [ ] Add `GROQ_API_KEY` to Vercel Production, deploy the provider-selector and grounding-quality repairs, and validate the selected provider live without exposing either API key.
+- [ ] Detect Groq free-tier quota exhaustion, preserve unsaved drafts, and show a clear retry/provider-switch message rather than returning an opaque generation failure.
