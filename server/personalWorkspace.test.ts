@@ -11,9 +11,14 @@ const dbMocks = vi.hoisted(() => ({
   updateJobForUser: vi.fn(),
 }));
 const llmMocks = vi.hoisted(() => ({ invokeLLM: vi.fn(), listLLMModels: vi.fn() }));
+const geminiMocks = vi.hoisted(() => ({ generateGeminiText: vi.fn() }));
 
 vi.mock("./db", () => dbMocks);
 vi.mock("./_core/llm", () => llmMocks);
+vi.mock("./portable/gemini", () => ({
+  GeminiProviderError: class GeminiProviderError extends Error {},
+  generateGeminiText: geminiMocks.generateGeminiText,
+}));
 
 import { appRouter } from "./routers";
 
@@ -37,9 +42,18 @@ function caller() {
   });
 }
 
+function portableCaller() {
+  return appRouter.createCaller({
+    user: { ...personalUser, email: "owner@example.com" },
+    req: { protocol: "https", headers: {} } as TrpcContext["req"],
+    res: { clearCookie: vi.fn() } as unknown as TrpcContext["res"],
+  });
+}
+
 describe("personal workspace routes", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.unstubAllEnvs();
     dbMocks.getPersonalUser.mockResolvedValue(personalUser);
   });
 
@@ -181,6 +195,29 @@ describe("personal workspace routes", () => {
       tailoredResume: roleBasedResume,
       tailoredResumeApprovedAt: null,
       emailDraft: expect.stringContaining("Could you share the job description?"),
+    }));
+  });
+
+  it("uses Gemini directly in portable No JD mode without querying the legacy model catalogue", async () => {
+    const roleBasedResume = "# Candidate Name\ncontact@example.com\n## EXPERIENCE\n### Product intern\n- Built a documented research workflow.";
+    vi.stubEnv("PORTABLE_AUTH_ENABLED", "true");
+    vi.stubEnv("GEMINI_API_KEY", "test-server-only-key");
+    dbMocks.getMasterProfile.mockResolvedValue({ resumeText: "Built a documented research workflow.", personalBio: null, emailSignature: null, resumeFileKey: null });
+    dbMocks.getJobForUser.mockResolvedValue({ id: 10, company: "Brivo", role: "AI Product Intern", jobDescription: "", contextMode: "limited" });
+    geminiMocks.generateGeminiText
+      .mockResolvedValueOnce(roleBasedResume)
+      .mockResolvedValueOnce("Hello Hiring Team,");
+    dbMocks.updateJobForUser.mockResolvedValue({ id: 10, tailoredResume: roleBasedResume });
+
+    await portableCaller().jobs.generateDrafts({ id: 10 });
+
+    expect(llmMocks.listLLMModels).not.toHaveBeenCalled();
+    expect(llmMocks.invokeLLM).not.toHaveBeenCalled();
+    expect(geminiMocks.generateGeminiText).toHaveBeenCalledTimes(2);
+    expect(dbMocks.updateJobForUser).toHaveBeenLastCalledWith(personalUser.id, 10, expect.objectContaining({
+      tailoredResume: roleBasedResume,
+      tailoredResumeApprovedAt: null,
+      emailDraft: "Hello Hiring Team,",
     }));
   });
 });
